@@ -1,18 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}About - Stock Sentiment Analysis{% endblock %}
+{% block title %}About - InfoEdge{% endblock %}
+
+{% block seo %}
+<meta name="description" content="Learn how InfoEdge combines real-time news, SEC EDGAR filings, and Groq-powered AI to deliver actionable market intelligence for investors.">
+<meta property="og:title" content="About - InfoEdge">
+<meta property="og:description" content="Learn how InfoEdge delivers AI-powered market intelligence from multiple data sources.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InfoEdge">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="About - InfoEdge">
+<meta name="twitter:description" content="Learn how InfoEdge delivers AI-powered market intelligence from multiple data sources.">
+{% endblock %}
 
 {% block content %}
-<!-- Title Section -->
+<!-- Hero -->
 <div class="title-section">
     <div class="container">
         <div class="row justify-content-center text-center">
             <div class="col-lg-10">
-                <h1 class="main-title">
-                    About Our Platform
-                </h1>
+                <h1 class="main-title">About InfoEdge</h1>
                 <p class="main-subtitle">
-                    See beyond the headlines—real-time sentiment for smarter trades
+                    Your edge in every market signal — news, filings, and intelligence that moves first.
                 </p>
             </div>
         </div>
@@ -21,49 +30,111 @@
 
 <div class="container py-5">
 
-
-
-
-
-
-    <!-- News Sources Section -->
-    <div class="row mb-5">
-        <div class="col-lg-8 mx-auto">
-            <div class="card card-enhanced">
-                <div class="card-body">
-                    <h3 class="card-title text-center mb-4">
-                        <i class="fas fa-newspaper me-2" style="color: var(--secondary);"></i>
-                        How We Get Our News
-                    </h3>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>📰 Where Our News Comes From:</h5>
-                            <p class="body-text">We use <strong>5+ Major News Sources</strong> to fetch real news articles about stocks. Our system scrapes the latest news headlines and information directly from the news sources.</p>
-                            
-                            <h5>🔄 How Fresh Is The News:</h5>
-                            <p class="body-text">We fetch news <strong>on-demand</strong> when you search for a stock. The news articles are typically from the last few hours to days, giving you recent market-relevant information.</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>🌍 What Companies We Cover:</h5>
-                            <p class="body-text">We track news for <strong>all major companies</strong> - from Apple and Google to Tesla and Amazon. If it's a big company that people invest in, we're watching it.</p>
-                            
-                            <h5>🛡️ How We Protect You:</h5>
-                            <p class="body-text">We have built-in protections to make sure we don't overwhelm the news source, so you always get reliable, up-to-date information without any delays.</p>
-                        </div>
+    <!-- Features Grid -->
+    <div class="row mb-5 g-4">
+        <div class="col-md-4">
+            <div class="card card-enhanced h-100">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-newspaper fa-2x" style="color: var(--accent-blue);"></i>
                     </div>
-                    <div class="alert alert-success mt-4">
-                        <i class="fas fa-brain me-2"></i>
-                        <strong>ML-Powered Sentiment Analysis:</strong> We use advanced Natural Language Processing Models for sentiment analysis to analyze news content. 
-                        Our system reads headlines and summaries to determine if news is looking bullish, bearish, or neutral, giving you data-driven insights into market sentiment.
+                    <h5>Real-Time News Intelligence</h5>
+                    <p class="text-muted mb-0">Aggregated news from multiple financial sources, filtered for relevance and freshness. Get the headlines that matter within the last 3 days.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-enhanced h-100">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-alt fa-2x" style="color: #06B6D4;"></i>
+                    </div>
+                    <h5>SEC Filing Analysis</h5>
+                    <p class="text-muted mb-0">Search 10-K, 10-Q, and 8-K filings from SEC EDGAR. AI-generated summaries distill complex filings into actionable highlights.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-enhanced h-100">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-brain fa-2x" style="color: #F59E0B;"></i>
+                    </div>
+                    <h5>AI-Powered Insights</h5>
+                    <p class="text-muted mb-0">Groq-accelerated LLMs analyze sentiment, extract catalysts and risks, and generate a market verdict — all in seconds.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="row mb-5">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4">
+                        <i class="fas fa-cogs me-2" style="color: var(--accent-blue);"></i>
+                        How It Works
+                    </h3>
+                    <div class="row text-center g-4">
+                        <div class="col-md-4">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px; background: rgba(99,102,241,0.15); color: #6366F1; font-size: 1.4rem; font-weight: 700;">1</div>
+                            <h6>Search</h6>
+                            <p class="text-muted small mb-0">Enter any stock ticker — US or Indian markets. We fetch the latest data instantly.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px; background: rgba(6,182,212,0.15); color: #06B6D4; font-size: 1.4rem; font-weight: 700;">2</div>
+                            <h6>Analyze</h6>
+                            <p class="text-muted small mb-0">Our AI reads news headlines, evaluates sentiment, and generates structured market insights.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px; background: rgba(245,158,11,0.15); color: #F59E0B; font-size: 1.4rem; font-weight: 700;">3</div>
+                            <h6>Decide</h6>
+                            <p class="text-muted small mb-0">Review the verdict, catalysts, risks, and sentiment breakdown to inform your investment decisions.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Disclaimer Section -->
+    <!-- Data Sources -->
     <div class="row mb-5">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-body p-4">
+                    <h3 class="text-center mb-4">
+                        <i class="fas fa-database me-2" style="color: var(--accent-blue);"></i>
+                        Our Data Sources
+                    </h3>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+                                <h6><i class="fab fa-yahoo me-2" style="color: #6001D2;"></i>Yahoo Finance</h6>
+                                <p class="text-muted small mb-0">Real-time stock prices, historical charts, and financial news articles.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+                                <h6><i class="fas fa-landmark me-2" style="color: #06B6D4;"></i>SEC EDGAR</h6>
+                                <p class="text-muted small mb-0">Official 10-K, 10-Q, and 8-K filings directly from the SEC database.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+                                <h6><i class="fas fa-bolt me-2" style="color: #F59E0B;"></i>Groq AI</h6>
+                                <p class="text-muted small mb-0">LLM-powered sentiment analysis, filing summaries, and structured market insights.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="row mb-5">
+        <div class="col-lg-10 mx-auto">
             <div class="alert alert-warning">
                 <h5 class="alert-heading">
                     <i class="fas fa-exclamation-triangle me-2"></i>
@@ -77,51 +148,27 @@
                 <p class="mb-0">
                     <strong>Risk Warning:</strong> Stock market investments carry inherent risks. The sentiment analysis
                     provided by this tool is based on news content and should not be the sole basis for investment decisions.
-                    Market conditions can change rapidly, and past performance does not guarantee future results.
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- GitHub Section -->
+    <!-- CTA -->
     <div class="row">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-lg-10 mx-auto">
             <div class="card card-enhanced">
-                <div class="card-body text-center">
-                    <h4 class="card-title mb-3">
-                        <i class="fab fa-github me-2" style="color: var(--secondary);"></i>
-                        Open Source Project
-                    </h4>
-                    <p class="body-text mb-3">
-                        This project is open source and available on GitHub. Feel free to contribute,
-                        report issues, or suggest improvements.
-                    </p>
-                    <a href="https://github.com/pranavdhawann/stock-sentiment-analysis" target="_blank" class="btn btn-primary">
-                        <i class="fab fa-github me-2"></i>
-                        View on GitHub
+                <div class="card-body text-center p-4">
+                    <h4 class="mb-3">Ready to get your edge?</h4>
+                    <p class="text-muted mb-4">Search any stock to see real-time sentiment analysis and AI-powered insights.</p>
+                    <a href="{{ url_for('main.home') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-2"></i>Start Analyzing
+                    </a>
+                    <a href="https://github.com/pranavdhawann/stock-sentiment-analysis" target="_blank" class="btn btn-outline-secondary">
+                        <i class="fab fa-github me-2"></i>View on GitHub
                     </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_head %}
-<style>
-.step-number {
-    width: 60px;
-    height: 60px;
-    font-size: 1.5rem;
-}
-
-.feature-icon {
-    width: 80px;
-    height: 80px;
-}
-</style>
-{% endblock %}
-
-{% block extra_scripts %}
-<!-- Theme functionality is handled in main.js -->
 {% endblock %}

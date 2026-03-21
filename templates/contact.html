@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Contact - InfoEdge{% endblock %}
+
+{% block seo %}
+<meta name="description" content="Get in touch with the InfoEdge team. Send us feedback, report issues, or suggest new features for our market intelligence platform.">
+<meta property="og:title" content="Contact - InfoEdge">
+<meta property="og:description" content="Get in touch with the InfoEdge team for feedback, issues, or feature suggestions.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InfoEdge">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Contact - InfoEdge">
+<meta name="twitter:description" content="Get in touch with the InfoEdge team for feedback, issues, or feature suggestions.">
+{% endblock %}
+
+{% block content %}
+<div class="title-section">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-10">
+                <h1 class="main-title">Contact Us</h1>
+                <p class="main-subtitle">
+                    Your edge in every market signal — news, filings, and intelligence that moves first.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card card-enhanced">
+                <div class="card-body p-5">
+                    <h3 class="mb-4 text-center">
+                        <i class="fas fa-envelope me-2" style="color: var(--accent-blue);"></i>
+                        Get in Touch
+                    </h3>
+
+                    <form id="contactForm">
+                        <div class="mb-4">
+                            <label class="form-label" for="contactName">Name</label>
+                            <input type="text" class="form-control" id="contactName" placeholder="Your name" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="contactEmail">Email</label>
+                            <input type="email" class="form-control" id="contactEmail" placeholder="your@email.com" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="contactMessage">Message</label>
+                            <textarea class="form-control" id="contactMessage" rows="5" placeholder="How can we help?" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="contactSubmitBtn">
+                            <i class="fas fa-paper-plane me-2"></i>Send Message
+                        </button>
+                    </form>
+
+                    <div id="contactSuccess" class="alert alert-success mt-4 d-none">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Thank you! Your message has been received. We'll get back to you soon.
+                    </div>
+
+                    <div id="contactError" class="alert alert-danger mt-4 d-none"></div>
+
+                    <hr class="my-4" style="border-color: var(--glass-border);">
+
+                    <div class="text-center">
+                        <p class="text-muted mb-2">Find us on GitHub</p>
+                        <a href="https://github.com/pranavdhawann/stock-sentiment-analysis" target="_blank" class="btn btn-outline-secondary btn-sm">
+                            <i class="fab fa-github me-2"></i>View Project
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('contactSubmitBtn');
+    const form = this;
+    const successEl = document.getElementById('contactSuccess');
+    const errorEl = document.getElementById('contactError');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+    successEl.classList.add('d-none');
+    errorEl.classList.add('d-none');
+
+    fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: document.getElementById('contactName').value.trim(),
+            email: document.getElementById('contactEmail').value.trim(),
+            message: document.getElementById('contactMessage').value.trim(),
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Message';
+        if (data.success) {
+            form.classList.add('d-none');
+            successEl.classList.remove('d-none');
+        } else {
+            errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+            errorEl.classList.remove('d-none');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Message';
+        errorEl.textContent = 'Network error. Please try again.';
+        errorEl.classList.remove('d-none');
+    });
+});
+</script>
+{% endblock %}

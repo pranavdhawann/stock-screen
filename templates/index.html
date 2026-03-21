@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Stock Sentiment Analysis - Real-time News Analysis{% endblock %}
+{% block title %}InfoEdge - Real-time News & Market Intelligence{% endblock %}
+
+{% block seo %}
+<meta name="description" content="Search any stock for AI-powered sentiment analysis, real-time news from multiple sources, and market intelligence that moves first.">
+<meta property="og:title" content="InfoEdge - Real-time News & Market Intelligence">
+<meta property="og:description" content="Search any stock for AI-powered sentiment analysis, real-time news, and market intelligence.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InfoEdge">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="InfoEdge - Real-time News & Market Intelligence">
+<meta name="twitter:description" content="Search any stock for AI-powered sentiment analysis, real-time news, and market intelligence.">
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -13,7 +24,7 @@
                         INFOEDGE
                     </h1>
                     <p class="main-subtitle">
-                        See beyond the headlines — real-time sentiment for smarter trades
+                        Your edge in every market signal — news, filings, and intelligence that moves first.
                     </p>
                 </div>
             </div>
@@ -41,67 +52,10 @@
                            data-bs-toggle="dropdown"
                            data-bs-auto-close="false">
                 </div>
-                <!-- Simplified Sample stocks dropdown -->
+                <!-- Sample stocks dropdown (populated dynamically from /api/stock_list) -->
                 <div class="dropdown-menu w-100" id="sampleStocksDropdown">
-                    <!-- US Stocks Section -->
-                    <div id="usStocksSection">
-                        <a class="dropdown-item" href="#" data-symbol="AAPL">Apple Inc. (AAPL)</a>
-                        <a class="dropdown-item" href="#" data-symbol="MSFT">Microsoft Corporation (MSFT)</a>
-                        <a class="dropdown-item" href="#" data-symbol="GOOGL">Alphabet Inc. (GOOGL)</a>
-                        <a class="dropdown-item" href="#" data-symbol="AMZN">Amazon.com Inc. (AMZN)</a>
-                        <a class="dropdown-item" href="#" data-symbol="TSLA">Tesla Inc. (TSLA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="META">Meta Platforms Inc. (META)</a>
-                        <a class="dropdown-item" href="#" data-symbol="NVDA">NVIDIA Corporation (NVDA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="NFLX">Netflix Inc. (NFLX)</a>
-                        <a class="dropdown-item" href="#" data-symbol="JPM">JPMorgan Chase & Co. (JPM)</a>
-                        <a class="dropdown-item" href="#" data-symbol="V">Visa Inc. (V)</a>
-                        <a class="dropdown-item" href="#" data-symbol="MA">Mastercard Inc. (MA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="PYPL">PayPal Holdings Inc. (PYPL)</a>
-                        <a class="dropdown-item" href="#" data-symbol="JNJ">Johnson & Johnson (JNJ)</a>
-                        <a class="dropdown-item" href="#" data-symbol="WMT">Walmart Inc. (WMT)</a>
-                        <a class="dropdown-item" href="#" data-symbol="DIS">Walt Disney Company (DIS)</a>
-                        <a class="dropdown-item" href="#" data-symbol="NKE">Nike Inc. (NKE)</a>
-                        <a class="dropdown-item" href="#" data-symbol="XOM">Exxon Mobil Corporation (XOM)</a>
-                        <a class="dropdown-item" href="#" data-symbol="BA">Boeing Company (BA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="CAT">Caterpillar Inc. (CAT)</a>
-                        <a class="dropdown-item" href="#" data-symbol="UBER">Uber Technologies Inc. (UBER)</a>
-                        <a class="dropdown-item" href="#" data-symbol="SHOP">Shopify Inc. (SHOP)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ZM">Zoom Video Communications Inc. (ZM)</a>
-                        <a class="dropdown-item" href="#" data-symbol="PLTR">Palantir Technologies Inc. (PLTR)</a>
-                    </div>
-                    
-                    <!-- Indian Stocks Section -->
-                    <div id="indianStocksSection" style="display: none;">
-                        <a class="dropdown-item" href="#" data-symbol="TCS">Tata Consultancy Services Ltd. (TCS)</a>
-                        <a class="dropdown-item" href="#" data-symbol="INFY">Infosys Ltd. (INFY)</a>
-                        <a class="dropdown-item" href="#" data-symbol="WIPRO">Wipro Ltd. (WIPRO)</a>
-                        <a class="dropdown-item" href="#" data-symbol="HCLTECH">HCL Technologies Ltd. (HCLTECH)</a>
-                        <a class="dropdown-item" href="#" data-symbol="TECHM">Tech Mahindra Ltd. (TECHM)</a>
-                        <a class="dropdown-item" href="#" data-symbol="HDFCBANK">HDFC Bank Ltd. (HDFCBANK)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ICICIBANK">ICICI Bank Ltd. (ICICIBANK)</a>
-                        <a class="dropdown-item" href="#" data-symbol="KOTAKBANK">Kotak Mahindra Bank Ltd. (KOTAKBANK)</a>
-                        <a class="dropdown-item" href="#" data-symbol="AXISBANK">Axis Bank Ltd. (AXISBANK)</a>
-                        <a class="dropdown-item" href="#" data-symbol="SBIN">State Bank of India (SBIN)</a>
-                        <a class="dropdown-item" href="#" data-symbol="RELIANCE">Reliance Industries Ltd. (RELIANCE)</a>
-                        <a class="dropdown-item" href="#" data-symbol="HINDUNILVR">Hindustan Unilever Ltd. (HINDUNILVR)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ITC">ITC Ltd. (ITC)</a>
-                        <a class="dropdown-item" href="#" data-symbol="BHARTIARTL">Bharti Airtel Ltd. (BHARTIARTL)</a>
-                        <a class="dropdown-item" href="#" data-symbol="MARUTI">Maruti Suzuki India Ltd. (MARUTI)</a>
-                        <a class="dropdown-item" href="#" data-symbol="SUNPHARMA">Sun Pharmaceutical Industries Ltd. (SUNPHARMA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="DRREDDY">Dr. Reddy's Laboratories Ltd. (DRREDDY)</a>
-                        <a class="dropdown-item" href="#" data-symbol="CIPLA">Cipla Ltd. (CIPLA)</a>
-                        <a class="dropdown-item" href="#" data-symbol="DIVISLAB">Divi's Laboratories Ltd. (DIVISLAB)</a>
-                        <a class="dropdown-item" href="#" data-symbol="BIOCON">Biocon Ltd. (BIOCON)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ONGC">Oil and Natural Gas Corporation Ltd. (ONGC)</a>
-                        <a class="dropdown-item" href="#" data-symbol="IOC">Indian Oil Corporation Ltd. (IOC)</a>
-                        <a class="dropdown-item" href="#" data-symbol="BPCL">Bharat Petroleum Corporation Ltd. (BPCL)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ADANIGREEN">Adani Green Energy Ltd. (ADANIGREEN)</a>
-                        <a class="dropdown-item" href="#" data-symbol="TATAPOWER">Tata Power Company Ltd. (TATAPOWER)</a>
-                        <a class="dropdown-item" href="#" data-symbol="ZOMATO">Zomato Ltd. (ZOMATO)</a>
-                        <a class="dropdown-item" href="#" data-symbol="PAYTM">One97 Communications Ltd. (PAYTM)</a>
-                        <a class="dropdown-item" href="#" data-symbol="POLICYBZR">PB Fintech Ltd. (POLICYBZR)</a>
-                        <a class="dropdown-item" href="#" data-symbol="NAZARA">Nazara Technologies Ltd. (NAZARA)</a>
-                    </div>
+                    <div id="usStocksSection"></div>
+                    <div id="indianStocksSection" style="display: none;"></div>
                 </div>
                                 
                                 <!-- Autocomplete Dropdown -->
@@ -118,13 +72,13 @@
                         </div>
 
                         <!-- Progress Bar -->
-                        <div id="progressSection" class="d-none mt-4" style="display: none !important;">
+                        <div id="progressSection" class="d-none mt-4">
                             <div class="card results-card">
                                 <div class="card-body text-center p-4">
                                     <h5 class="card-title mb-3">Analyzing Sentiment</h5>
-                                    <div class="progress mb-3" style="height: 20px; background-color: #f0f0f0;">
-                                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
-                                             role="progressbar" style="width: 0%; background-color: #007bff !important;"></div>
+                                    <div class="progress mb-3" style="height: 20px;">
+                                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                             role="progressbar" style="width: 0%;"></div>
                                     </div>
                                     <p id="progressText" class="text-muted">Initializing analysis...</p>
                                 </div>
@@ -140,50 +94,22 @@
 
                         <!-- Results Section -->
                         <div id="resultsSection" class="d-none mt-4">
-                            <!-- Sentiment Meter and Stock Chart Side by Side -->
+                            <!-- Stock Chart -->
                             <div class="row mb-4 equal-height">
-                                <div class="col-md-4">
-                                    <div class="card results-card">
-                                        <div class="card-body text-center p-4">
-                                            <div id="overallSentiment" class="sentiment-display"></div>
-                                            
-                                            <!-- Horizontal Sentiment Meter -->
-                                            <div class="sentiment-meter-container" id="sentimentMeter_horizontal">
-                                                <div class="sentiment-meter-header">
-                                                    <div class="sentiment-label" id="sentimentLabel">Neutral</div>
-                                                    <div class="sentiment-confidence" id="sentimentConfidence">58%</div>
-                                                </div>
-                                                
-                                                <div class="sentiment-bar-container">
-                                                    <div class="sentiment-bar-background">
-                                                        <div class="sentiment-bar-fill" id="sentimentBarFill"></div>
-                                                        <div class="sentiment-bar-indicator" id="sentimentBarIndicator"></div>
-                                                    </div>
-                                                    
-                                                    <div class="sentiment-bar-labels">
-                                                        <span class="bar-label negative">Bearish</span>
-                                                        <span class="bar-label neutral">Neutral</span>
-                                                        <span class="bar-label positive">Bullish</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                 <div class="col-md-8">
+                                 <div class="col-lg-12">
                                      <div class="card">
                                          <div class="card-body">
                                              <div class="row mb-3">
-                                                <div class="col-md-6">
+                                                <div class="col-sm-6">
                                                     <h5 id="stockPrice" class="mb-1">$0.00</h5>
                                                     <span id="priceChange" class="text-muted">+$0.00 (0.00%)</span>
                                                 </div>
-                                                <div class="col-md-6 text-end">
+                                                <div class="col-sm-6 text-end">
                                                     <small class="text-muted">Last 30 days</small>
                                                 </div>
                                             </div>
                                             <div class="chart-container" style="position: relative; cursor: pointer;" title="Click to expand chart">
-                                                <canvas id="priceSentimentChart" width="400" height="200"></canvas>
+                                                <canvas id="priceSentimentChart" width="400" height="280"></canvas>
                                                 <div class="chart-expand-overlay" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 8px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity 0.3s;">
                                                     <i class="fas fa-expand"></i>
                                                 </div>
@@ -212,10 +138,6 @@
                              <div class="mt-4">
                                  <div class="news-header d-flex justify-content-between align-items-center mb-3">
                                      <h4 class="mb-0 text-uppercase fw-bold">RECENT NEWS ANALYSIS</h4>
-                                     <div class="scroll-indicator d-none d-md-flex">
-                                         <i class="fas fa-chevron-down text-muted"></i>
-                                         <small class="text-muted ms-1">Scroll for more</small>
-                                     </div>
                                  </div>
                                  <div class="card">
                                      <div class="card-body p-0">
@@ -260,23 +182,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Make title clickable to reset search and go to home
     const mainTitle = document.getElementById('mainTitle');
-    console.log('Main title element:', mainTitle); // Debug log
-    
+
     if (mainTitle) {
         mainTitle.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('Title clicked!'); // Debug log
-            
+
             // Reset search input
             if (searchInput) {
                 searchInput.value = '';
-                console.log('Search input cleared'); // Debug log
             }
-            
+
             // Hide all results and dropdowns
             if (resultsSection) {
                 resultsSection.classList.add('d-none');
-                console.log('Results section hidden'); // Debug log
             }
             if (autocompleteDropdown) {
                 autocompleteDropdown.style.display = 'none';
@@ -319,11 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleStockSections('IN');
             }
             
-            // Update sidebar market cards if they are visible
-            const sidebarMarketCards = document.getElementById('sidebarMarketCards');
-            if (sidebarMarketCards && sidebarMarketCards.style.display !== 'none') {
-                showMarketCardsInSidebar();
-            }
         });
         
         // Add click handlers for individual flags
@@ -343,11 +256,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     toggleStockSections('IN');
                 }
                 
-                // Update sidebar market cards if they are visible
-                const sidebarMarketCards = document.getElementById('sidebarMarketCards');
-                if (sidebarMarketCards && sidebarMarketCards.style.display !== 'none') {
-                    showMarketCardsInSidebar();
-                }
             });
         });
     }
@@ -366,104 +274,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Function to show market cards in sidebar
-    function showMarketCardsInSidebar() {
-        const sidebarMarketCards = document.getElementById('sidebarMarketCards');
-        const marketCardsContainer = document.getElementById('marketCardsContainer');
-        
-        if (!sidebarMarketCards || !marketCardsContainer) return;
-        
-        // Get current market location
-        const currentCountry = document.getElementById('toggleIndicator').classList.contains('active') ? 'IN' : 'US';
-        
-        // Load market data and create sidebar cards
-        fetch(`/api/get_default_markets?location=${currentCountry}`)
+    // Load stock dropdown from API
+    function loadStockDropdown() {
+        fetch('/api/stock_list')
             .then(response => response.json())
             .then(data => {
-                if (data.error) {
-                    console.error('Error loading market data for sidebar:', data.error);
-                    return;
+                const usSection = document.getElementById('usStocksSection');
+                const inSection = document.getElementById('indianStocksSection');
+                if (usSection && data.US) {
+                    usSection.innerHTML = data.US.map(s =>
+                        `<a class="dropdown-item" href="#" data-symbol="${s.symbol}">${s.name} (${s.symbol})</a>`
+                    ).join('');
                 }
-                
-                console.log('Market data received for sidebar:', data);
-                console.log('Markets array:', data.markets);
-                
-                // Clear existing cards
-                marketCardsContainer.innerHTML = '';
-                
-                // Create sidebar market cards
-                data.markets.forEach(market => {
-                    const card = document.createElement('div');
-                    card.className = 'sidebar-market-card';
-                    
-                    // Add null checks for market data
-                    const price = market.current_price || 0;
-                    const change = market.price_change || 0;
-                    const changePercent = market.price_change_percent || 0;
-                    const currency = market.currency || '$';
-                    const name = market.name || 'Unknown';
-                    
-                    console.log(`Market ${name}:`, {
-                        current_price: market.current_price,
-                        price_change: market.price_change,
-                        price_change_percent: market.price_change_percent,
-                        currency: market.currency,
-                        extracted_price: price,
-                        extracted_change: change,
-                        extracted_changePercent: changePercent
-                    });
-                    
-                    const changeClass = change >= 0 ? 'positive' : 'negative';
-                    const changeSymbol = change >= 0 ? '+' : '';
-                    
-                    // FORCE MARKET DATA DISPLAY - Ensure values are not 0
-                    const displayPrice = price > 0 ? price : (market.current_price || 0);
-                    const displayChange = change !== 0 ? change : (market.price_change || 0);
-                    const displayChangePercent = changePercent !== 0 ? changePercent : (market.price_change_percent || 0);
-                    
-                    console.log(`FORCE MARKET UPDATE for ${name}:`, {
-                        original_price: price,
-                        display_price: displayPrice,
-                        original_change: change,
-                        display_change: displayChange,
-                        color_class: displayChange >= 0 ? 'positive' : 'negative'
-                    });
-                    
-                    card.innerHTML = `
-                        <div class="sidebar-market-name">${name}</div>
-                        <div class="sidebar-market-price">${currency}${displayPrice.toFixed(2)}</div>
-                        <div class="sidebar-market-change ${displayChange >= 0 ? 'positive' : 'negative'}">
-                            ${displayChange >= 0 ? '+' : ''}${displayChange.toFixed(2)} (${displayChange >= 0 ? '+' : ''}${displayChangePercent.toFixed(2)}%)
-                        </div>
-                    `;
-                    
-                    marketCardsContainer.appendChild(card);
-                    
-                    // Debug: Check if color classes are applied
-                    setTimeout(() => {
-                        const changeElement = card.querySelector('.sidebar-market-change');
-                        if (changeElement) {
-                            console.log(`Color check for ${name}:`, {
-                                className: changeElement.className,
-                                computedColor: window.getComputedStyle(changeElement).color,
-                                textContent: changeElement.textContent
-                            });
-                        }
-                    }, 100);
-                });
-                
-                // Show sidebar market cards
-                sidebarMarketCards.style.display = 'block';
+                if (inSection && data.IN) {
+                    inSection.innerHTML = data.IN.map(s =>
+                        `<a class="dropdown-item" href="#" data-symbol="${s.symbol}">${s.name} (${s.symbol})</a>`
+                    ).join('');
+                }
             })
-            .catch(error => {
-                // Handle different types of errors
-                if (error.message && error.message.includes('listener indicated an asynchronous response')) {
-                    console.warn('Browser extension async error (non-critical) in market data:', error.message);
-                    return;
-                }
-                console.error('Error fetching market data for sidebar:', error);
-            });
+            .catch(error => console.error('Error loading stock list:', error));
     }
+    loadStockDropdown();
+
     
     // Show sample stocks when clicking on search input and clear existing results
     searchInput.addEventListener('focus', function() {
@@ -593,16 +425,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
     });
     
-    // Test function to verify elements exist
-    function testElements() {
-        console.log('Testing elements...');
-        console.log('progressSection:', document.getElementById('progressSection'));
-        console.log('progressBar:', document.getElementById('progressBar'));
-        console.log('progressText:', document.getElementById('progressText'));
-        console.log('overallSentiment:', document.getElementById('overallSentiment'));
-        console.log('sentimentConfidence:', document.getElementById('sentimentConfidence'));
-    }
-    
     // Global error handler for async listener errors (browser extensions)
     window.addEventListener('unhandledrejection', function(event) {
         if (event.reason && event.reason.message && 
@@ -611,68 +433,9 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault(); // Prevent the error from showing in console
         }
     });
-    
-    
-     // Update horizontal sentiment meter
-     function updateHorizontalSentimentMeter(sentiment, confidence) {
-         const sentimentLabel = document.getElementById('sentimentLabel');
-         const sentimentConfidence = document.getElementById('sentimentConfidence');
-         const sentimentBarFill = document.getElementById('sentimentBarFill');
-         const sentimentBarIndicator = document.getElementById('sentimentBarIndicator');
-         
-         if (!sentimentLabel || !sentimentConfidence || !sentimentBarFill || !sentimentBarIndicator) return;
-         
-         // Calculate sentiment value (0-100)
-         let value = 50; // Default neutral
-         let color = '#F59E0B'; // Default neutral color
-         
-         if (sentiment === 'Very Positive') {
-             value = 85 + (confidence * 15);
-             color = '#10B981'; // Green
-         } else if (sentiment === 'Positive') {
-             value = 70 + (confidence * 15);
-             color = '#10B981'; // Green
-         } else if (sentiment === 'Neutral') {
-             value = 40 + (confidence * 20);
-             color = '#F59E0B'; // Orange
-         } else if (sentiment === 'Negative') {
-             value = 30 - (confidence * 15);
-             color = '#EF4444'; // Red
-         } else if (sentiment === 'Very Negative') {
-             value = 15 - (confidence * 15);
-             color = '#EF4444'; // Red
-         }
-         
-         // Ensure value is within bounds
-         value = Math.max(0, Math.min(100, value));
-         
-         // Update text labels with new terminology
-         let displaySentiment = sentiment;
-         if (sentiment === 'Very Positive' || sentiment === 'Positive') {
-             displaySentiment = 'Bullish';
-         } else if (sentiment === 'Very Negative' || sentiment === 'Negative') {
-             displaySentiment = 'Bearish';
-         } else if (sentiment === 'Neutral') {
-             displaySentiment = 'Neutral';
-         }
-         sentimentLabel.textContent = displaySentiment;
-         sentimentConfidence.textContent = Math.round(value) + '%';
-         
-         // Update bar fill and indicator position
-         sentimentBarFill.style.width = value + '%';
-         sentimentBarIndicator.style.left = value + '%';
-         sentimentBarIndicator.style.borderColor = color;
-         
-         console.log('Horizontal meter updated:', sentiment, confidence, 'value:', value, 'color:', color);
-     }
-    
+
      // Theme functionality is now handled in main.js
-     
-     // Run test after page loads
-     setTimeout(testElements, 1000);
-    
-    // Analyze sentiment function
-    
+
     // Load default market data
     function loadDefaultMarkets(location = 'US') {
         const defaultMarketsContainer = document.getElementById('defaultMarketsContainer');
@@ -765,22 +528,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         
         // Determine chart color based on price movement
-        let chartColor = '#4F46E5'; // Default blue
-        let backgroundColor = 'rgba(79, 70, 229, 0.1)';
-        
+        let chartColor = '#06B6D4'; // Default cyan
+        let bgColor = 'rgba(6, 182, 212, 0.08)';
+
         if (chartData.length >= 2) {
             const latestClose = chartData[chartData.length - 1].y;
             const previousClose = chartData[chartData.length - 2].y;
-            
+
             if (latestClose >= previousClose) {
-                chartColor = '#43a047'; // Green for rising
-                backgroundColor = 'rgba(67, 160, 71, 0.1)';
+                chartColor = '#10B981';
+                bgColor = 'rgba(16, 185, 129, 0.08)';
             } else {
-                chartColor = '#e53935'; // Red for falling
-                backgroundColor = 'rgba(229, 57, 53, 0.1)';
+                chartColor = '#EF4444';
+                bgColor = 'rgba(239, 68, 68, 0.08)';
             }
         }
-        
+
         try {
             new Chart(ctx, {
                 type: 'line',
@@ -789,15 +552,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         label: market.display_name,
                         data: chartData,
                         borderColor: chartColor,
-                        backgroundColor: backgroundColor,
-                        borderWidth: 4,
-                        tension: 0.3,
+                        backgroundColor: bgColor,
+                        borderWidth: 2,
+                        tension: 0.4,
                         fill: true,
                         pointRadius: 0,
-                        pointHoverRadius: 8,
+                        pointHoverRadius: 6,
                         pointHoverBackgroundColor: chartColor,
-                        pointHoverBorderColor: '#ffffff',
-                        pointHoverBorderWidth: 3
+                        pointHoverBorderColor: '#0A0F1E',
+                        pointHoverBorderWidth: 2
                     }]
                 },
                 options: {
@@ -812,20 +575,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             type: 'time',
                             time: {
                                 unit: 'day',
-                                displayFormats: {
-                                    day: 'MMM dd'
-                                }
+                                displayFormats: { day: 'MMM dd' }
                             },
                             display: true,
-                            grid: {
-                                display: false
-                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
                             ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 11,
-                                    weight: '500'
-                                },
+                                color: '#64748B',
+                                font: { size: 10, family: "'JetBrains Mono', monospace" },
                                 maxTicksLimit: 6
                             }
                         },
@@ -833,15 +589,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             display: true,
                             position: 'right',
                             grid: {
-                                color: 'rgba(107, 114, 128, 0.1)',
+                                color: 'rgba(255, 255, 255, 0.04)',
                                 drawBorder: false
                             },
                             ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 11,
-                                    weight: '500'
-                                },
+                                color: '#64748B',
+                                font: { size: 10, family: "'JetBrains Mono', monospace" },
+                                maxTicksLimit: 5,
                                 callback: function(value) {
                                     return market.currency + value.toLocaleString();
                                 }
@@ -849,29 +603,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             enabled: true,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
+                            backgroundColor: 'rgba(10, 15, 30, 0.95)',
+                            titleColor: '#E2E8F0',
+                            bodyColor: '#E2E8F0',
                             borderColor: chartColor,
-                            borderWidth: 2,
+                            borderWidth: 1,
                             cornerRadius: 8,
                             displayColors: false,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
+                            titleFont: { size: 12, weight: 'bold', family: "'Inter', sans-serif" },
+                            bodyFont: { size: 12, family: "'JetBrains Mono', monospace" },
                             callbacks: {
-                                title: function(context) {
-                                    return market.display_name;
-                                },
+                                title: function(context) { return market.display_name; },
                                 label: function(context) {
                                     return `${market.currency}${context.parsed.y.toLocaleString()}`;
                                 }
@@ -974,7 +719,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto-reset function (called when starting new search)
     function autoReset() {
-        console.log('autoReset called - results section will be hidden');
         // Hide all sections
         resultsSection.classList.add('d-none');
         progressSection.style.display = 'none';
@@ -987,11 +731,6 @@ document.addEventListener('DOMContentLoaded', function() {
             defaultMarketsSection.style.display = 'block';
         }
         
-        // Hide sidebar market cards
-        const sidebarMarketCards = document.getElementById('sidebarMarketCards');
-        if (sidebarMarketCards) {
-            sidebarMarketCards.style.display = 'none';
-        }
         
         // Button removed - no need to reset button state
         
@@ -1022,7 +761,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear stock price display only if no results are showing
         if (resultsSection.classList.contains('d-none')) {
-            console.log('Resetting stock price to $0.00 because results section is hidden');
             const stockPrice = document.getElementById('stockPrice');
             const priceChange = document.getElementById('priceChange');
             if (stockPrice) {
@@ -1032,8 +770,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 priceChange.textContent = '+$0.00 (0.00%)';
                 priceChange.className = 'text-muted';
             }
-        } else {
-            console.log('NOT resetting stock price because results section is visible');
         }
         
         // Destroy chart if it exists
@@ -1045,8 +781,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Reset all function (kept for compatibility)
     window.resetAll = function() {
-        console.log('Resetting all...');
-        
         // Clear search input
         searchInput.value = '';
         
@@ -1058,8 +792,6 @@ document.addEventListener('DOMContentLoaded', function() {
         autoReset();
         
         // Default markets section stays visible
-        
-        console.log('Reset complete');
     };
     
     // Add click handler for autocomplete items to show news immediately
@@ -1103,29 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
      function displayNewsOnlyResults(data) {
-         // DIRECT PRICE DISPLAY WORKAROUND - Show price immediately
-         if (data.current_price && data.currency) {
-             const stockPriceElement = document.getElementById('stockPrice');
-             const priceChangeElement = document.getElementById('priceChange');
-             
-             if (stockPriceElement) {
-                 const price = parseFloat(data.current_price).toFixed(2);
-                 stockPriceElement.textContent = `${data.currency}${price}`;
-                 console.log('DIRECT PRICE UPDATE (News Only):', `${data.currency}${price}`);
-             }
-             
-             if (priceChangeElement && data.price_change !== undefined && data.price_change_percent !== undefined) {
-                 const isPositive = data.price_change >= 0;
-                 const sign = isPositive ? '+' : '';
-                 const priceChange = parseFloat(data.price_change).toFixed(2);
-                 const priceChangePercent = parseFloat(data.price_change_percent).toFixed(2);
-                 priceChangeElement.textContent = `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`;
-                 priceChangeElement.className = `text-muted ${isPositive ? 'price-positive' : 'price-negative'}`;
-                 console.log('DIRECT PRICE CHANGE UPDATE (News Only):', `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`);
-             }
-         }
-         
-         // Update stock price display (backup)
+         // Update stock price display
          updateStockPrice(data);
          
          // Create price-sentiment chart
@@ -1133,14 +843,17 @@ document.addEventListener('DOMContentLoaded', function() {
          
          // Display insights
          if (data.insights) {
+             window._lastInsights = data.insights;
              displayInsights(data.insights);
          }
-         
-         // Display news items with sentiment badges
+
+         // Display news items with sentiment badges (filtered to last 3 days)
         const newsItemsContainer = document.getElementById('newsItems');
-        
-        if (data.news_items && data.news_items.length > 0) {
-            newsItemsContainer.innerHTML = data.news_items.map(item => `
+        const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
+        const recentNewsItems = (data.news_items || []).filter(item => (item.published * 1000) >= threeDaysAgo);
+
+        if (recentNewsItems.length > 0) {
+            newsItemsContainer.innerHTML = recentNewsItems.map(item => `
                 <div class="news-item">
                     <div class="card news-card-enhanced">
                         <div class="card-body">
@@ -1150,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="card-text text-muted mb-3 news-snippet">${item.summary.substring(0, 200)}...</p>
                             <div class="news-footer d-flex justify-content-between align-items-center flex-wrap">
                                 <div class="news-meta-row d-flex justify-content-between align-items-center w-100">
-                                    <small class="text-muted publisher">${item.publisher}</small>
+                                    <small class="text-muted publisher">${item.publisher} &middot; ${new Date(item.published * 1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</small>
                                     <span class="badge ${getSentimentBadgeColor(item.sentiment)} sentiment-pill sentiment-badge">
                                         ${getDisplaySentiment(item.sentiment)}
                                     </span>
@@ -1166,15 +879,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Show results section
-        console.log('Showing results section in displayNewsOnlyResults...');
         resultsSection.classList.remove('d-none');
-        console.log('Results section classes:', resultsSection.className);
         
         // Show sentiment card but make it smaller
-        const sentimentCard = document.querySelector('.row .col-md-6:first-child');
+        const sentimentCard = document.querySelector('.equal-height > [class*="col-lg"]');
         if (sentimentCard) {
             sentimentCard.style.display = 'block';
-            sentimentCard.className = 'col-md-4'; // Make it smaller
+            sentimentCard.className = 'col-lg-4'; // Make it smaller
         }
         
         // Make news count card smaller too
@@ -1184,24 +895,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function analyzeSentiment(symbol) {
-        console.log('Starting sentiment analysis for:', symbol);
-        
         // Show progress bar
         progressSection.style.display = 'block';
         progressSection.classList.remove('d-none');
         resultsSection.classList.add('d-none');
         errorMessage.classList.add('d-none');
-        
-        console.log('Progress section shown');
-        
-        // Button removed - no need to set button state
-        
+
         // Simulate progress
         let progress = 0;
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
-        
-        console.log('Progress elements:', progressBar, progressText);
         
         const progressInterval = setInterval(() => {
             progress += Math.random() * 15;
@@ -1230,34 +933,9 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            console.log('Received data:', data);
-            
-            // DIRECT PRICE DISPLAY WORKAROUND - Show price immediately
-            if (data.current_price && data.currency) {
-                // Use the force update function for guaranteed display
-                forceUpdatePrice(data.current_price, data.currency, data.price_change, data.price_change_percent);
-                
-                // Also do direct update as backup
-                const stockPriceElement = document.getElementById('stockPrice');
-                const priceChangeElement = document.getElementById('priceChange');
-                
-                if (stockPriceElement) {
-                    const price = parseFloat(data.current_price).toFixed(2);
-                    stockPriceElement.textContent = `${data.currency}${price}`;
-                    console.log('DIRECT PRICE UPDATE:', `${data.currency}${price}`);
-                }
-                
-                if (priceChangeElement && data.price_change !== undefined && data.price_change_percent !== undefined) {
-                    const isPositive = data.price_change >= 0;
-                    const sign = isPositive ? '+' : '';
-                    const priceChange = parseFloat(data.price_change).toFixed(2);
-                    const priceChangePercent = parseFloat(data.price_change_percent).toFixed(2);
-                    priceChangeElement.textContent = `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`;
-                    priceChangeElement.className = `text-muted ${isPositive ? 'price-positive' : 'price-negative'}`;
-                    console.log('DIRECT PRICE CHANGE UPDATE:', `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`);
-                }
-            }
-            
+            // Update stock price display
+            updateStockPrice(data);
+
             // Complete progress
             clearInterval(progressInterval);
             if (progressBar) {
@@ -1273,12 +951,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 progressSection.classList.add('d-none');
                 
                 if (data.error) {
-                    console.log('Error in data:', data.error);
                     showError(data.error);
                     return;
                 }
                 
-                console.log('Displaying results...');
                 displayResults(data);
             }, 500);
         })
@@ -1302,74 +978,48 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function displayResults(data) {
-        console.log('displayResults called with:', data);
-        
-        // DIRECT PRICE DISPLAY WORKAROUND - Show price immediately
-        if (data.current_price && data.currency) {
-            const stockPriceElement = document.getElementById('stockPrice');
-            const priceChangeElement = document.getElementById('priceChange');
-            
-            if (stockPriceElement) {
-                const price = parseFloat(data.current_price).toFixed(2);
-                stockPriceElement.textContent = `${data.currency}${price}`;
-                console.log('DIRECT PRICE UPDATE (Display Results):', `${data.currency}${price}`);
-            }
-            
-            if (priceChangeElement && data.price_change !== undefined && data.price_change_percent !== undefined) {
-                const isPositive = data.price_change >= 0;
-                const sign = isPositive ? '+' : '';
-                const priceChange = parseFloat(data.price_change).toFixed(2);
-                const priceChangePercent = parseFloat(data.price_change_percent).toFixed(2);
-                priceChangeElement.textContent = `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`;
-                priceChangeElement.className = `text-muted ${isPositive ? 'price-positive' : 'price-negative'}`;
-                console.log('DIRECT PRICE CHANGE UPDATE (Display Results):', `${sign}${data.currency}${priceChange} (${sign}${priceChangePercent}%)`);
-            }
-        }
-        
+        // Update stock price display
+        updateStockPrice(data);
+
         // Hide main market section and move to sidebar
         const defaultMarketsSection = document.getElementById('defaultMarketsSection');
         if (defaultMarketsSection) {
             defaultMarketsSection.style.display = 'none';
         }
         
-        // Show market cards in sidebar
-        showMarketCardsInSidebar();
         
         // Show sentiment results (only after button click)
-        const sentimentCard = document.querySelector('.row .col-md-6:first-child');
+        const sentimentCard = document.querySelector('.equal-height > [class*="col-lg"]');
         if (sentimentCard) {
             sentimentCard.style.display = 'block';
-            sentimentCard.className = 'col-md-6'; // Reset to full size
+            sentimentCard.className = 'col-lg-4'; // Reset to original size
         }
         
         
         // Update overall sentiment
         const sentimentElement = document.getElementById('overallSentiment');
-        console.log('Elements found:', sentimentElement, 'confidenceScore element not found - using sentimentConfidence instead');
-        
+
         if (sentimentElement) {
             sentimentElement.textContent = (data.overall_sentiment || 'Neutral').toUpperCase();
             sentimentElement.className = `sentiment-display ${getSentimentColor(data.overall_sentiment)}`;
         }
         
-        // Update horizontal sentiment meter
-        updateHorizontalSentimentMeter(data.overall_sentiment, data.confidence);
-        
-         // Update stock price display
-         updateStockPrice(data);
-         
          // Create price-sentiment chart
          createPriceSentimentChart(data);
          
          // Display insights
          if (data.insights) {
+             window._lastInsights = data.insights;
              displayInsights(data.insights);
          }
-         
-         // Display news items with sentiment
+
+         // Display news items with sentiment (filtered to last 3 days)
          const newsItemsContainer = document.getElementById('newsItems');
-        if (data.news_items && data.news_items.length > 0) {
-            newsItemsContainer.innerHTML = data.news_items.map(item => `
+        const threeDaysAgo2 = Date.now() - (3 * 24 * 60 * 60 * 1000);
+        const recentNewsItems2 = (data.news_items || []).filter(item => (item.published * 1000) >= threeDaysAgo2);
+
+        if (recentNewsItems2.length > 0) {
+            newsItemsContainer.innerHTML = recentNewsItems2.map(item => `
                 <div class="news-item">
                     <div class="card news-card-enhanced">
                         <div class="card-body">
@@ -1379,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="card-text text-muted mb-3 news-snippet">${item.summary.substring(0, 200)}...</p>
                             <div class="news-footer d-flex justify-content-between align-items-center flex-wrap">
                                 <div class="news-meta-row d-flex justify-content-between align-items-center w-100">
-                                    <small class="text-muted publisher">${item.publisher}</small>
+                                    <small class="text-muted publisher">${item.publisher} &middot; ${new Date(item.published * 1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</small>
                                     <span class="badge ${getSentimentBadgeColor(item.sentiment)} sentiment-pill sentiment-badge">
                                         ${getDisplaySentiment(item.sentiment)}
                                     </span>
@@ -1395,9 +1045,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
          // Show results section
-         console.log('Showing results section in displayResults...');
          resultsSection.classList.remove('d-none');
-         console.log('Results section classes:', resultsSection.className);
          
          // Don't clear search input - keep the stock name visible
          autocompleteDropdown.style.display = 'none';
@@ -1407,47 +1055,176 @@ document.addEventListener('DOMContentLoaded', function() {
      function displayInsights(insights) {
          const insightsContent = document.getElementById('insightsContent');
          if (!insightsContent || !insights) return;
-         
-         const html = `
+
+         if (insights.verdict) {
+             displayRichInsights(insightsContent, insights);
+         } else {
+             displayLegacyInsights(insightsContent, insights);
+         }
+     }
+
+     function displayLegacyInsights(el, insights) {
+         el.innerHTML = `
              <div class="row">
                  <div class="col-md-6 mb-4">
-                     <h6 class="text-primary mb-3">
-                         <i class="fas fa-chart-line me-2"></i>
-                         Market Outlook
-                     </h6>
-                     <p class="mb-3">${insights.market_outlook}</p>
-                     
-                     <h6 class="text-success mb-3">
-                         <i class="fas fa-arrow-up me-2"></i>
-                         Opportunities
-                     </h6>
+                     <h6 class="text-primary mb-3"><i class="fas fa-chart-line me-2"></i>Market Outlook</h6>
+                     <p class="mb-3">${insights.market_outlook || ''}</p>
+                     <h6 class="text-success mb-3"><i class="fas fa-arrow-up me-2"></i>Opportunities</h6>
                      <ul class="list-unstyled">
-                         ${insights.opportunities.map(opp => `<li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>${opp}</li>`).join('')}
+                         ${(insights.opportunities || []).map(opp => `<li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>${opp}</li>`).join('')}
                      </ul>
                  </div>
-                 
                  <div class="col-md-6 mb-4">
-                     <h6 class="text-warning mb-3">
-                         <i class="fas fa-key me-2"></i>
-                         Key Points
-                     </h6>
+                     <h6 class="text-warning mb-3"><i class="fas fa-key me-2"></i>Key Points</h6>
                      <ul class="list-unstyled">
-                         ${insights.key_points.map(point => `<li class="mb-2"><i class="fas fa-bullseye text-warning me-2"></i>${point}</li>`).join('')}
+                         ${(insights.key_points || []).map(point => `<li class="mb-2"><i class="fas fa-bullseye text-warning me-2"></i>${point}</li>`).join('')}
                      </ul>
-                     
-                     <h6 class="text-danger mb-3">
-                         <i class="fas fa-exclamation-triangle me-2"></i>
-                         Risk Factors
-                     </h6>
+                     <h6 class="text-danger mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors</h6>
                      <ul class="list-unstyled">
-                         ${insights.risk_factors.map(risk => `<li class="mb-2"><i class="fas fa-exclamation-circle text-danger me-2"></i>${risk}</li>`).join('')}
+                         ${(insights.risk_factors || []).map(risk => `<li class="mb-2"><i class="fas fa-exclamation-circle text-danger me-2"></i>${risk}</li>`).join('')}
                      </ul>
+                 </div>
+             </div>`;
+     }
+
+     function displayRichInsights(el, ins) {
+         const v = ins.verdict;
+         const signalColor = v.signal === 'Bullish' ? 'var(--positive)' : v.signal === 'Bearish' ? 'var(--negative)' : 'var(--neutral-warn)';
+         const signalBadge = v.signal === 'Bullish' ? 'bg-success' : v.signal === 'Bearish' ? 'bg-danger' : 'bg-warning text-dark';
+         const confBadge = v.confidence_label === 'High' ? 'bg-success' : v.confidence_label === 'Medium' ? 'bg-warning text-dark' : 'bg-danger';
+
+         // Direction helpers
+         function dirIcon(d) {
+             if (d === 'up') return '<i class="fas fa-arrow-up text-success me-1"></i>';
+             if (d === 'down') return '<i class="fas fa-arrow-down text-danger me-1"></i>';
+             return '<i class="fas fa-minus text-warning me-1"></i>';
+         }
+         function sevBadge(s) {
+             const cls = s === 'High' ? 'bg-danger' : s === 'Medium' ? 'bg-warning text-dark' : 'bg-secondary';
+             return `<span class="badge ${cls} severity-badge">${s}</span>`;
+         }
+         function trendIcon(t) {
+             if (t === 'improving') return '<i class="fas fa-trending-up text-success me-2"></i>';
+             if (t === 'declining') return '<i class="fas fa-trending-down text-danger me-2"></i>';
+             return '<i class="fas fa-minus text-warning me-2"></i>';
+         }
+
+         // Build catalysts
+         const catalystsHtml = (ins.catalysts || []).map(c => `
+             <div class="catalyst-item mb-2">
+                 ${dirIcon(c.direction)}
+                 <span class="badge bg-secondary me-2">${c.tag || ''}</span>
+                 <span>${c.text || ''}</span>
+             </div>
+         `).join('') || '<p class="text-muted mb-0">No catalysts identified.</p>';
+
+         // Build risks
+         const risksHtml = (ins.risks || []).map(r => `
+             <div class="risk-item mb-2">
+                 <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                 ${sevBadge(r.severity || 'Low')}
+                 <span class="ms-2">${r.text || ''}</span>
+             </div>
+         `).join('') || '<p class="text-muted mb-0">No specific risks identified.</p>';
+
+         // Source breakdown bar
+         const sb = ins.source_breakdown || {};
+         const bullPct = sb.bullish_pct || 0;
+         const neuPct = sb.neutral_pct || 0;
+         const bearPct = sb.bearish_pct || 0;
+
+         // Velocity
+         const vel = ins.sentiment_velocity || {};
+
+         // Report copy
+         const report = ins.report_summary || {};
+
+         el.innerHTML = `
+             <!-- Verdict -->
+             <div class="verdict-card p-3 mb-3" style="border-left: 4px solid ${signalColor}">
+                 <div class="d-flex align-items-center justify-content-between mb-2">
+                     <div class="d-flex align-items-center" style="min-height: 32px;">
+                         <span class="badge ${signalBadge} verdict-badge me-3">${v.signal}</span>
+                         <span class="badge ${confBadge} verdict-badge">${v.confidence_label} confidence</span>
+                     </div>
+                     <button class="btn btn-sm btn-outline-secondary copy-report-btn" onclick="copyReport(this)" title="Copy report to clipboard">
+                         <i class="fas fa-copy me-1"></i>Copy
+                     </button>
+                 </div>
+                 <p class="mb-1 fw-bold" style="font-size: 1.1em;">${v.one_liner || ''}</p>
+                 ${v.confidence_explanation ? `<p class="text-muted mb-2" style="font-size: 0.85em;">${v.confidence_explanation}</p>` : ''}
+                 ${ins.analyst_note ? `<p class="mb-0" style="font-size: 0.9em;">${ins.analyst_note}</p>` : ''}
+             </div>
+
+             <!-- Catalysts + Risks -->
+             <div class="row mb-3">
+                 <div class="col-md-6 mb-3 mb-md-0">
+                     <h6 class="text-success mb-3"><i class="fas fa-rocket me-2"></i>POSITIVES</h6>
+                     ${catalystsHtml}
+                 </div>
+                 <div class="col-md-6">
+                     <h6 class="text-danger mb-3"><i class="fas fa-shield-alt me-2"></i>RISKS</h6>
+                     ${risksHtml}
                  </div>
              </div>
-             
+
+             <!-- Velocity + Source Breakdown -->
+             <div class="row mb-3">
+                 <div class="col-md-6 mb-3 mb-md-0">
+                     <h6 class="mb-2"><i class="fas fa-tachometer-alt me-2"></i>SENTIMENT VELOCITY</h6>
+                     <div class="velocity-indicator d-flex align-items-center">
+                         ${trendIcon(vel.trend)}
+                         <span class="fw-bold me-2" style="text-transform: capitalize;">${vel.trend || 'stable'}</span>
+                         <span class="text-muted">${vel.label || ''}</span>
+                     </div>
+                 </div>
+                 <div class="col-md-6">
+                     <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>SOURCE BREAKDOWN</h6>
+                     <div class="source-bar mb-2">
+                         ${bullPct > 0 ? `<div class="source-bar-bull" style="width:${bullPct}%" title="Bullish ${bullPct}%"></div>` : ''}
+                         ${neuPct > 0 ? `<div class="source-bar-neu" style="width:${neuPct}%" title="Neutral ${neuPct}%"></div>` : ''}
+                         ${bearPct > 0 ? `<div class="source-bar-bear" style="width:${bearPct}%" title="Bearish ${bearPct}%"></div>` : ''}
+                     </div>
+                     <div class="d-flex justify-content-between" style="font-size:0.8em;">
+                         <span class="text-success">${bullPct}% Bullish</span>
+                         <span class="text-muted">${neuPct}% Neutral</span>
+                         <span class="text-danger">${bearPct}% Bearish</span>
+                     </div>
+                     ${sb.analyst_takeaway ? `<p class="text-muted mt-1 mb-0" style="font-size:0.85em;">${sb.analyst_takeaway}</p>` : ''}
+                 </div>
+             </div>
+
+             <!-- Disclaimer -->
+             <p class="text-muted mt-3 mb-0" style="font-size:0.75em;">${report.disclaimer || ''}</p>
          `;
-         
-         insightsContent.innerHTML = html;
+     }
+
+     function copyReport(btn) {
+         const ins = window._lastInsights;
+         if (!ins) return;
+         const v = ins.verdict || {};
+         const report = ins.report_summary || {};
+         const catalysts = (ins.catalysts || []).map(c => `  - [${c.direction}] ${c.tag}: ${c.text}`).join('\n');
+         const risks = (ins.risks || []).map(r => `  - [${r.severity}] ${r.text}`).join('\n');
+         const text = [
+             report.title || '',
+             '',
+             `Signal: ${v.signal} (${v.confidence_label} confidence)`,
+             v.one_liner || '',
+             '',
+             report.executive_summary || '',
+             '',
+             catalysts ? `Catalysts:\n${catalysts}` : '',
+             risks ? `Risks:\n${risks}` : '',
+             '',
+             report.disclaimer || '',
+         ].filter(Boolean).join('\n');
+
+         navigator.clipboard.writeText(text).then(() => {
+             const orig = btn.innerHTML;
+             btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied';
+             setTimeout(() => { btn.innerHTML = orig; }, 2000);
+         });
      }
     
     function showError(message) {
@@ -1475,7 +1252,6 @@ document.addEventListener('DOMContentLoaded', function() {
              case 'very negative': 
              case 'bearish': return 'bg-danger';
              case 'neutral': return 'bg-warning text-dark';
-             case 'volatile': return 'bg-secondary';
              default: return 'bg-secondary';
          }
      }
@@ -1487,70 +1263,22 @@ document.addEventListener('DOMContentLoaded', function() {
              case 'negative': 
              case 'very negative': return 'Bearish';
              case 'neutral': return 'Neutral';
-             case 'volatile': return 'Volatile';
+             case 'unknown': return 'N/A';
              default: return sentiment;
          }
      }
     
-    // FORCE PRICE DISPLAY - Simple workaround function
-    function forceUpdatePrice(price, currency, change, changePercent) {
-        console.log('FORCE PRICE UPDATE called with:', { price, currency, change, changePercent });
-        
-        const stockPriceElement = document.getElementById('stockPrice');
-        const priceChangeElement = document.getElementById('priceChange');
-        
-        if (stockPriceElement && price) {
-            stockPriceElement.textContent = `${currency}${parseFloat(price).toFixed(2)}`;
-            console.log('FORCE UPDATE - Price set to:', `${currency}${parseFloat(price).toFixed(2)}`);
-        }
-        
-        if (priceChangeElement && change !== undefined && changePercent !== undefined) {
-            const isPositive = change >= 0;
-            const sign = isPositive ? '+' : '';
-            const priceChange = parseFloat(change).toFixed(2);
-            const priceChangePercent = parseFloat(changePercent).toFixed(2);
-            priceChangeElement.textContent = `${sign}${currency}${priceChange} (${sign}${priceChangePercent}%)`;
-            priceChangeElement.className = `text-muted ${isPositive ? 'price-positive' : 'price-negative'}`;
-            console.log('FORCE UPDATE - Price change set to:', `${sign}${currency}${priceChange} (${sign}${priceChangePercent}%)`);
-        }
-    }
-    
     // Update stock price display
     function updateStockPrice(data) {
-        console.log('updateStockPrice called with data:', data);
         const stockPriceElement = document.getElementById('stockPrice');
         const priceChangeElement = document.getElementById('priceChange');
-        
-        console.log('Price elements found:', stockPriceElement, priceChangeElement);
-        console.log('Price data:', {
-            current_price: data.current_price,
-            price_change: data.price_change,
-            price_change_percent: data.price_change_percent,
-            currency: data.currency
-        });
-        
-        if (stockPriceElement) {
-            console.log('Stock price element details:', {
-                currentText: stockPriceElement.textContent,
-                isVisible: stockPriceElement.offsetParent !== null,
-                display: window.getComputedStyle(stockPriceElement).display,
-                visibility: window.getComputedStyle(stockPriceElement).visibility
-            });
-        }
-        
+
         if (stockPriceElement && data.current_price) {
             const currency = data.currency || '$';
             const price = parseFloat(data.current_price).toFixed(2);
             stockPriceElement.textContent = `${currency}${price}`;
-            console.log('Updated stock price to:', `${currency}${price}`);
-            console.log('Element textContent after update:', stockPriceElement.textContent);
-        } else {
-            console.log('Stock price element not found or no current_price data');
-            console.log('stockPriceElement exists:', !!stockPriceElement);
-            console.log('data.current_price exists:', !!data.current_price);
-            console.log('data.current_price value:', data.current_price);
         }
-        
+
         if (priceChangeElement && data.price_change !== undefined && data.price_change_percent !== undefined) {
             const isPositive = data.price_change >= 0;
             const sign = isPositive ? '+' : '';
@@ -1559,9 +1287,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const priceChangePercent = parseFloat(data.price_change_percent).toFixed(2);
             priceChangeElement.textContent = `${sign}${currency}${priceChange} (${sign}${priceChangePercent}%)`;
             priceChangeElement.className = `text-muted ${isPositive ? 'price-positive' : 'price-negative'}`;
-            console.log('Updated price change to:', `${sign}${currency}${priceChange} (${sign}${priceChangePercent}%)`);
-        } else {
-            console.log('Price change element not found or no price change data');
         }
     }
     
@@ -1584,30 +1309,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         
         // Determine chart color based ONLY on stock movement (latest vs previous close)
-        let chartColor = '#4F46E5'; // Default blue
-        let backgroundColor = 'rgba(79, 70, 229, 0.1)';
-        
-        console.log('Chart data points:', chartData.length);
+        let chartColor = '#06B6D4'; // Default cyan
+        let backgroundColor = 'rgba(6, 182, 212, 0.08)';
         
         // Calculate stock movement from latest close vs previous close
         if (chartData.length >= 2) {
             const latestClose = chartData[chartData.length - 1].y;
             const previousClose = chartData[chartData.length - 2].y;
-            const priceChange = latestClose - previousClose;
-            
-            console.log('Stock movement:', previousClose, 'to', latestClose, 'change:', priceChange.toFixed(2));
-            
+
             if (latestClose >= previousClose) {
-                chartColor = '#43a047'; // Green for rising stock
-                backgroundColor = 'rgba(67, 160, 71, 0.1)';
-                console.log('Setting chart to GREEN for rising stock');
+                chartColor = '#10B981'; // Green for rising stock
+                backgroundColor = 'rgba(16, 185, 129, 0.08)';
             } else {
-                chartColor = '#e53935'; // Red for falling stock
-                backgroundColor = 'rgba(229, 57, 53, 0.1)';
-                console.log('Setting chart to RED for falling stock');
+                chartColor = '#EF4444'; // Red for falling stock
+                backgroundColor = 'rgba(239, 68, 68, 0.08)';
             }
-        } else {
-            console.log('Not enough data points for movement calculation');
         }
         
         try {
@@ -1625,6 +1341,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 interaction: {
                     mode: 'index',
                     intersect: false,
@@ -1633,30 +1350,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'day'
+                            unit: 'day',
+                            displayFormats: { day: 'MMM dd' }
                         },
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        }
+                        title: { display: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            font: { family: "'JetBrains Mono', monospace", size: 10 },
+                            maxTicksLimit: 8
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' }
                     },
                     y: {
                         type: 'linear',
                         display: true,
-                        title: {
-                            display: true,
-                            text: 'Stock Price ($)'
-                        }
+                        position: 'right',
+                        title: { display: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            font: { family: "'JetBrains Mono', monospace", size: 10 },
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        },
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' }
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
+                    legend: { display: false },
                     tooltip: {
                         mode: 'index',
-                        intersect: false
+                        intersect: false,
+                        backgroundColor: 'rgba(10, 15, 30, 0.95)',
+                        titleColor: 'rgba(255, 255, 255, 0.9)',
+                        bodyColor: 'rgba(255, 255, 255, 0.7)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        titleFont: { family: "'JetBrains Mono', monospace" },
+                        bodyFont: { family: "'JetBrains Mono', monospace" }
                     }
                 }
             }
@@ -1697,7 +1428,10 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             document.body.appendChild(modal);
-            
+            // Trigger reflow, then add active class for transition
+            modal.offsetHeight;
+            modal.classList.add('active');
+
             // Get original chart instance and recreate with larger size
             const originalChart = window.priceSentimentChartInstance;
             if (originalChart) {

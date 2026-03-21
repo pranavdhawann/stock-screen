@@ -223,3 +223,4 @@ temp/
 
 # Google Cloud specific
 .gcloudignore
+/.claude

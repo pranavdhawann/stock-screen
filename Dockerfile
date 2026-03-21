@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application files
 COPY app.py .
+COPY app/ app/
 COPY templates/ templates/
 COPY static/ static/
 

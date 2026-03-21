@@ -3,104 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Stock Sentiment Analysis{% endblock %}</title>
-    
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>{% block title %}InfoEdge - Real-time News & Market Intelligence{% endblock %}</title>
+
+    <!-- SEO Meta Tags -->
+    {% block seo %}
+    <meta name="description" content="InfoEdge delivers real-time stock news, SEC filing analysis, and AI-powered market intelligence. Track sentiment, analyze 10-K/10-Q/8-K filings, and make informed investment decisions.">
+    <meta property="og:title" content="InfoEdge - Real-time News & Market Intelligence">
+    <meta property="og:description" content="AI-powered stock sentiment analysis, SEC filing summaries, and multi-source news intelligence.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="InfoEdge">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="InfoEdge - Real-time News & Market Intelligence">
+    <meta name="twitter:description" content="AI-powered stock sentiment analysis, SEC filing summaries, and multi-source news intelligence.">
+    {% endblock %}
+    {% block canonical %}{% endblock %}
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "InfoEdge",
+        "description": "Real-time stock news, SEC filing analysis, and AI-powered market intelligence platform.",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" id="mobileMenuBtn">
-        <i class="fas fa-bars"></i>
-    </button>
-    
-    <!-- Mobile Overlay -->
-    <div class="mobile-overlay" id="mobileOverlay"></div>
-    
-    <!-- Sidebar Navigation -->
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-menu">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('home') }}">
-                        <i class="fas fa-home"></i>
-                        <span>HOME</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('about') }}">
-                        <i class="fas fa-info-circle"></i>
-                        <span>ABOUT</span>
-                    </a>
-                </li>
-            </ul>
-            
-        </div>
-        
-        <!-- Market Cards Section (hidden by default) -->
-        <div class="sidebar-market-cards" id="sidebarMarketCards" style="display: none;">
-            <div class="market-cards-title">Market Overview</div>
-            <div class="market-cards-container" id="marketCardsContainer">
-                <!-- Market cards will be dynamically inserted here -->
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav" id="topNav">
+        <div class="top-nav-inner">
+            <div class="nav-brand">
+                <a href="{{ url_for('main.home') }}">
+                    <span class="brand-text">INFOEDGE</span>
+                </a>
             </div>
-        </div>
 
-        <div class="sidebar-footer">
-            <!-- Market Location Selector -->
-            <div class="market-location-selector">
-                <div class="nav-item">
-                    <div class="market-location-switch">
-                        <button class="market-location-btn" id="marketLocationSwitch" type="button">
-                            <div class="flag-container">
-                                <span class="flag flag-us" data-country="US">🇺🇸</span>
-                                <span class="flag flag-in" data-country="IN">🇮🇳</span>
-                            </div>
-                            <div class="toggle-indicator" id="toggleIndicator"></div>
-                        </button>
-                    </div>
+            <div class="nav-links" id="navLinks">
+                <a class="nav-link-item" href="{{ url_for('main.home') }}">
+                    <i class="fas fa-newspaper"></i>
+                    <span>News</span>
+                </a>
+                <a class="nav-link-item" href="{{ url_for('main.sec_filings') }}">
+                    <i class="fas fa-file-alt"></i>
+                    <span>SEC Filings</span>
+                </a>
+                <a class="nav-link-item" href="{{ url_for('main.about') }}">
+                    <i class="fas fa-info-circle"></i>
+                    <span>About</span>
+                </a>
+                <a class="nav-link-item" href="{{ url_for('main.contact') }}">
+                    <i class="fas fa-envelope"></i>
+                    <span>Contact</span>
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <div class="market-location-switch">
+                    <button class="market-location-btn" id="marketLocationSwitch" type="button">
+                        <div class="flag-container">
+                            <span class="flag flag-us" data-country="US">🇺🇸</span>
+                            <span class="flag flag-in" data-country="IN">🇮🇳</span>
+                        </div>
+                        <div class="toggle-indicator" id="toggleIndicator"></div>
+                    </button>
                 </div>
             </div>
-            
-            <div class="footer-buttons">
-                <div class="back-to-top-widget" id="backToTop" title="Back to Top">
-                    <div class="back-to-top-toggle">
-                        <i class="fas fa-arrow-up"></i>
-                    </div>
-                </div>
-                <div class="theme-widget" id="themeToggle" title="Toggle Theme">
-                    <div class="theme-toggle">
-                        <i class="fas fa-sun" id="themeIcon"></i>
-                    </div>
-                </div>
-            </div>
+
+            <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </nav>
+
+    <!-- Back to Top -->
+    <div class="back-to-top-widget" id="backToTop" title="Back to Top">
+        <div class="back-to-top-toggle">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="footer-minimal">
-        <div class="footer-content">
-            <span>Created by Pranav Dhawan</span>
-            <span class="separator">|</span>
-            <a href="https://github.com/pranavdhawann/stock-sentiment-analysis" target="_blank">
-                <i class="fab fa-github"></i> View on GitHub
-            </a>
-            <span class="separator">|</span>
-            <span>© 2025 All Rights Reserved</span>
-        </div>
-    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -109,7 +109,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
