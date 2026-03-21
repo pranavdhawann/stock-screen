@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from groq import Groq
 from app.config import (
     NEWSAPI_KEY, FINNHUB_API_KEY, ALPHAVANTAGE_API_KEY,
-    GROQ_API_KEY, GROQ_MODEL, YAHOO_HEADERS, YAHOO_TIMEOUT,
+    GROQ_API_KEY, GROQ_MODEL,
 )
 from app.services.cache import aggregated_news_cache, get_cached, set_cached
 from app.services.news import fetch_news as fetch_yahoo_news

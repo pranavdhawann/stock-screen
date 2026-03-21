@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}InfoEdge - Real-time News & Market Intelligence{% endblock %}
+{% block title %}Stock Screen - Real-time News & Market Intelligence{% endblock %}
 
 {% block seo %}
 <meta name="description" content="Search any stock for AI-powered sentiment analysis, real-time news from multiple sources, and market intelligence that moves first.">
-<meta property="og:title" content="InfoEdge - Real-time News & Market Intelligence">
+<meta property="og:title" content="Stock Screen - Real-time News & Market Intelligence">
 <meta property="og:description" content="Search any stock for AI-powered sentiment analysis, real-time news, and market intelligence.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="InfoEdge">
+<meta property="og:site_name" content="Stock Screen">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="InfoEdge - Real-time News & Market Intelligence">
+<meta name="twitter:title" content="Stock Screen - Real-time News & Market Intelligence">
 <meta name="twitter:description" content="Search any stock for AI-powered sentiment analysis, real-time news, and market intelligence.">
 {% endblock %}
 
@@ -21,7 +21,7 @@
             <div class="row justify-content-center text-center">
                 <div class="col-lg-10">
                     <h1 class="main-title" id="mainTitle" style="cursor: pointer;">
-                        INFOEDGE
+                        STOCK SCREEN
                     </h1>
                     <p class="main-subtitle">
                         Your edge in every market signal — news, filings, and intelligence that moves first.
@@ -659,17 +659,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 
                 document.body.appendChild(modal);
-                
+                // Trigger reflow, then add active class for transition
+                modal.offsetHeight;
+                modal.classList.add('active');
+
                 // Get original chart instance and recreate with larger size
                 const originalChart = Chart.getChart(canvas);
                 if (originalChart) {
                     const expandedCanvas = document.getElementById(`expanded-${canvas.id}`);
                     const expandedCtx = expandedCanvas.getContext('2d');
-                    
+
                     // Clone the chart data
                     const chartData = JSON.parse(JSON.stringify(originalChart.data));
                     const chartOptions = JSON.parse(JSON.stringify(originalChart.options));
-                    
+
                     // Update options for expanded view
                     chartOptions.responsive = true;
                     chartOptions.maintainAspectRatio = false;
@@ -677,7 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     chartOptions.scales.y.display = true;
                     chartOptions.plugins.legend.display = true;
                     chartOptions.plugins.tooltip.enabled = true;
-                    
+
                     // Create new chart instance
                     new Chart(expandedCtx, {
                         type: originalChart.config.type,
@@ -685,33 +688,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         options: chartOptions
                     });
                 }
-                
+
                 // Close modal functionality
-                const closeBtn = modal.querySelector('.chart-modal-close');
-                closeBtn.addEventListener('click', () => {
-                    // Destroy the expanded chart before removing modal
+                function closeMarketModal() {
                     const expandedCanvas = document.getElementById(`expanded-${canvas.id}`);
                     if (expandedCanvas) {
                         const expandedChart = Chart.getChart(expandedCanvas);
-                        if (expandedChart) {
-                            expandedChart.destroy();
-                        }
+                        if (expandedChart) expandedChart.destroy();
                     }
                     document.body.removeChild(modal);
-                });
-                
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        // Destroy the expanded chart before removing modal
-                        const expandedCanvas = document.getElementById(`expanded-${canvas.id}`);
-                        if (expandedCanvas) {
-                            const expandedChart = Chart.getChart(expandedCanvas);
-                            if (expandedChart) {
-                                expandedChart.destroy();
-                            }
-                        }
-                        document.body.removeChild(modal);
-                    }
+                }
+
+                modal.querySelector('.chart-modal-close').addEventListener('click', closeMarketModal);
+                modal.addEventListener('click', (e) => { if (e.target === modal) closeMarketModal(); });
+                document.addEventListener('keydown', function handler(e) {
+                    if (e.key === 'Escape') { closeMarketModal(); document.removeEventListener('keydown', handler); }
                 });
             });
         });
@@ -1459,31 +1450,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Close modal functionality
-            const closeBtn = modal.querySelector('.chart-modal-close');
-            closeBtn.addEventListener('click', () => {
-                // Destroy the expanded chart before removing modal
+            function closeStockModal() {
                 const expandedCanvas = document.getElementById('expanded-priceSentimentChart');
                 if (expandedCanvas) {
                     const expandedChart = Chart.getChart(expandedCanvas);
-                    if (expandedChart) {
-                        expandedChart.destroy();
-                    }
+                    if (expandedChart) expandedChart.destroy();
                 }
                 document.body.removeChild(modal);
-            });
-            
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    // Destroy the expanded chart before removing modal
-                    const expandedCanvas = document.getElementById('expanded-priceSentimentChart');
-                    if (expandedCanvas) {
-                        const expandedChart = Chart.getChart(expandedCanvas);
-                        if (expandedChart) {
-                            expandedChart.destroy();
-                        }
-                    }
-                    document.body.removeChild(modal);
-                }
+            }
+
+            modal.querySelector('.chart-modal-close').addEventListener('click', closeStockModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeStockModal(); });
+            document.addEventListener('keydown', function handler(e) {
+                if (e.key === 'Escape') { closeStockModal(); document.removeEventListener('keydown', handler); }
             });
         });
         

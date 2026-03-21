@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}SEC Filings - InfoEdge{% endblock %}
+{% block title %}SEC Filings - Stock Screen{% endblock %}
 
 {% block seo %}
 <meta name="description" content="Search and analyze SEC 10-K, 10-Q, and 8-K filings from EDGAR. Get AI-generated summaries and visual filing timelines for any US-listed company.">
-<meta property="og:title" content="SEC Filings - InfoEdge">
+<meta property="og:title" content="SEC Filings - Stock Screen">
 <meta property="og:description" content="Search and analyze SEC filings with AI-generated summaries and visual timelines.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="InfoEdge">
+<meta property="og:site_name" content="Stock Screen">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SEC Filings - InfoEdge">
+<meta name="twitter:title" content="SEC Filings - Stock Screen">
 <meta name="twitter:description" content="Search and analyze SEC filings with AI-generated summaries and visual timelines.">
 {% endblock %}
 
@@ -34,10 +34,11 @@
             <div class="card card-enhanced">
                 <div class="card-body p-4">
                     <form id="secSearchForm" class="d-flex gap-3 align-items-end flex-wrap">
-                        <div class="flex-grow-1">
+                        <div class="flex-grow-1" style="position: relative;">
                             <label class="form-label">Ticker Symbol</label>
                             <input type="text" class="form-control" id="secTickerInput"
-                                   placeholder="e.g. AAPL, MSFT, TSLA" required>
+                                   placeholder="e.g. AAPL, MSFT, TSLA" required autocomplete="off">
+                            <div id="secAutocompleteDropdown" class="autocomplete-dropdown" style="display: none;"></div>
                         </div>
                         <div>
                             <label class="form-label">Filing Types</label>
@@ -99,7 +100,7 @@
                                 <div class="col-md-6">
                                     <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
                                         <h6 class="text-center mb-2" style="font-size: 0.85rem;">Filing Type Distribution</h6>
-                                        <div style="height: 180px;">
+                                        <div style="height: 180px; cursor: pointer;" title="Click to expand">
                                             <canvas id="typeDoughnut"></canvas>
                                         </div>
                                     </div>
@@ -107,7 +108,7 @@
                                 <div class="col-md-6">
                                     <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
                                         <h6 class="text-center mb-2" style="font-size: 0.85rem;">Filings by Year</h6>
-                                        <div style="height: 180px;">
+                                        <div style="height: 180px; cursor: pointer;" title="Click to expand">
                                             <canvas id="yearBar"></canvas>
                                         </div>
                                     </div>
@@ -121,7 +122,7 @@
                 <div class="card card-enhanced mb-4" id="timelineCard">
                     <div class="card-body">
                         <h6 class="mb-3"><i class="fas fa-timeline me-2"></i>Filing Timeline</h6>
-                        <div style="height: 200px;">
+                        <div style="height: 200px; cursor: pointer;" title="Click to expand">
                             <canvas id="filingTimeline"></canvas>
                         </div>
                     </div>
@@ -160,11 +161,81 @@
     let typeDoughnutChart = null;
     let yearBarChart = null;
     let currentCompanyName = '';
+    let secSearchTimeout = null;
 
     const TYPE_COLORS = { '10-K': '#6366F1', '10-Q': '#06B6D4', '8-K': '#F59E0B' };
 
+    // Autocomplete for ticker input
+    const secTickerInput = document.getElementById('secTickerInput');
+    const secAutocomplete = document.getElementById('secAutocompleteDropdown');
+
+    secTickerInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(secSearchTimeout);
+
+        if (query.length < 1) {
+            secAutocomplete.style.display = 'none';
+            return;
+        }
+
+        secSearchTimeout = setTimeout(() => {
+            fetch(`/api/search_stocks?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(results => {
+                    if (results.length === 0) {
+                        secAutocomplete.style.display = 'none';
+                        return;
+                    }
+                    secAutocomplete.innerHTML = results.map(stock => `
+                        <div class="autocomplete-item" data-symbol="${stock.symbol}">
+                            <strong>${stock.symbol}</strong> - ${stock.name}
+                        </div>
+                    `).join('');
+                    secAutocomplete.style.display = 'block';
+
+                    secAutocomplete.querySelectorAll('.autocomplete-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            secTickerInput.value = this.dataset.symbol;
+                            secAutocomplete.style.display = 'none';
+                        });
+                    });
+                })
+                .catch(() => { secAutocomplete.style.display = 'none'; });
+        }, 150);
+    });
+
+    // Keyboard navigation for autocomplete
+    secTickerInput.addEventListener('keydown', function(e) {
+        const items = secAutocomplete.querySelectorAll('.autocomplete-item');
+        if (!items.length || secAutocomplete.style.display === 'none') return;
+
+        const active = secAutocomplete.querySelector('.autocomplete-item.active');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (active) { active.classList.remove('active'); const next = active.nextElementSibling || items[0]; next.classList.add('active'); }
+            else { items[0].classList.add('active'); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (active) { active.classList.remove('active'); const prev = active.previousElementSibling || items[items.length - 1]; prev.classList.add('active'); }
+            else { items[items.length - 1].classList.add('active'); }
+        } else if (e.key === 'Enter' && active) {
+            e.preventDefault();
+            secTickerInput.value = active.dataset.symbol;
+            secAutocomplete.style.display = 'none';
+        } else if (e.key === 'Escape') {
+            secAutocomplete.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!secTickerInput.contains(e.target) && !secAutocomplete.contains(e.target)) {
+            secAutocomplete.style.display = 'none';
+        }
+    });
+
     document.getElementById('secSearchForm').addEventListener('submit', function(e) {
         e.preventDefault();
+        secAutocomplete.style.display = 'none';
         const ticker = document.getElementById('secTickerInput').value.trim().toUpperCase();
         if (!ticker) return;
 
@@ -423,5 +494,70 @@
             content.classList.remove('d-none');
         });
     }
+
+    // Chart expansion for SEC filing charts
+    function expandChart(canvasId, title) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const originalChart = Chart.getChart(canvas);
+        if (!originalChart) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'chart-modal';
+        modal.innerHTML = `
+            <div class="chart-modal-content">
+                <div class="chart-modal-header">
+                    <h5>${title} - Expanded View</h5>
+                    <button class="chart-modal-close">&times;</button>
+                </div>
+                <div class="chart-modal-body">
+                    <canvas id="expanded-${canvasId}" width="800" height="500"></canvas>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.offsetHeight;
+        modal.classList.add('active');
+
+        const expandedCanvas = document.getElementById(`expanded-${canvasId}`);
+        const chartData = JSON.parse(JSON.stringify(originalChart.data));
+        const chartOptions = JSON.parse(JSON.stringify(originalChart.options));
+        chartOptions.responsive = true;
+        chartOptions.maintainAspectRatio = false;
+
+        new Chart(expandedCanvas.getContext('2d'), {
+            type: originalChart.config.type,
+            data: chartData,
+            options: chartOptions
+        });
+
+        function closeModal() {
+            const ec = document.getElementById(`expanded-${canvasId}`);
+            if (ec) { const ch = Chart.getChart(ec); if (ch) ch.destroy(); }
+            document.body.removeChild(modal);
+        }
+
+        modal.querySelector('.chart-modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', function handler(e) {
+            if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', handler); }
+        });
+    }
+
+    // Attach click-to-expand on SEC chart containers
+    document.addEventListener('click', function(e) {
+        const chartContainers = {
+            'typeDoughnut': 'Filing Type Distribution',
+            'yearBar': 'Filings by Year',
+            'filingTimeline': 'Filing Timeline'
+        };
+        for (const [id, title] of Object.entries(chartContainers)) {
+            const canvas = document.getElementById(id);
+            if (canvas && canvas.contains(e.target)) {
+                expandChart(id, `${currentCompanyName} - ${title}`);
+                return;
+            }
+        }
+    });
 </script>
 {% endblock %}

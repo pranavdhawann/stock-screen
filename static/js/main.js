@@ -202,36 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Utility functions
-function formatNumber(num) {
-    return new Intl.NumberFormat().format(num);
-}
-
-function formatPercentage(num) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'percent',
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
-    }).format(num);
-}
-
-function formatDate(timestamp) {
-    return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    }).format(new Date(timestamp * 1000));
-}
-
-function handleError(error, userMessage = 'An unexpected error occurred') {
-    console.error('Error:', error);
-    const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        const errorText = document.getElementById('errorText');
-        if (errorText) errorText.textContent = userMessage;
-        errorDiv.classList.remove('d-none');
-        setTimeout(() => errorDiv.classList.add('d-none'), 5000);
-    }
-}
-
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {

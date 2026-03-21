@@ -17,7 +17,7 @@ SEC_FILINGS_CACHE_SIZE = 50
 
 # SEC EDGAR Configuration
 SEC_EDGAR_HEADERS = {
-    'User-Agent': 'InfoEdge info@infoedge.app',
+    'User-Agent': 'Stock Screen info@stockscreen.app',
     'Accept-Encoding': 'gzip, deflate',
 }
 SEC_FILINGS_TTL = 1800  # 30 minutes

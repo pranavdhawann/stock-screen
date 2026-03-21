@@ -217,10 +217,10 @@ def contact():
                 'Content-Type': 'application/json',
             },
             json={
-                'from': 'InfoEdge <onboarding@resend.dev>',
+                'from': 'Stock Screen <onboarding@resend.dev>',
                 'to': [CONTACT_EMAIL],
-                'subject': f'InfoEdge Contact: {name}',
-                'html': f'<h3>New contact from InfoEdge</h3>'
+                'subject': f'Stock Screen Contact: {name}',
+                'html': f'<h3>New contact from Stock Screen</h3>'
                         f'<p><strong>Name:</strong> {name}</p>'
                         f'<p><strong>Email:</strong> {email}</p>'
                         f'<p><strong>Message:</strong></p><p>{message}</p>',

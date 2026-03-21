@@ -1,6 +1,6 @@
 /* ============================================================
    DARK GLASS TERMINAL THEME
-   Stock Sentiment Analysis Dashboard — InfoEdge
+   Stock Sentiment Analysis Dashboard — Stock Screen
    ============================================================ */
 
 /* Google Fonts */
@@ -762,9 +762,9 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 16px;
-    margin: 16px 0;
+    margin: 16px auto;
     overflow: hidden;
-    max-width: 100%;
+    max-width: 800px;
     min-height: 280px;
 }
 

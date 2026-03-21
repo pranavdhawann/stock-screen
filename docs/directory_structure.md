@@ -1,9 +1,9 @@
-# 📁 INFOEDGE — Directory Structure
+# 📁 STOCK SCREEN — Directory Structure
 
 > Complete directory layout of the **Stock Sentiment Analysis Platform** project.
 
 ```
-infoedge/
+stockscreen/
 │
 ├── .dockerignore              # Files/dirs excluded from Docker build context
 ├── .env                       # Environment variables (API keys, config)

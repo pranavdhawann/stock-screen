@@ -1,4 +1,4 @@
-# 📊 INFOEDGE — Project Status
+# 📊 STOCK SCREEN — Project Status
 
 > Current state, known limitations, and data integrity notes for the **Stock Sentiment Analysis Platform**.
 
