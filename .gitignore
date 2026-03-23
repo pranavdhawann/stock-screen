@@ -57,6 +57,7 @@ Thumbs.db
 # --- Cloud / deploy configs ---
 .dockerignore
 .gcloudignore
+cloudbuild.yaml
 .claude/
 
 # --- Docs (internal) ---

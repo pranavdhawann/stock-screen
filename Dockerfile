@@ -1,43 +1,38 @@
-# Use Python 3.11 slim image for better performance
+# Use Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
+# Install system deps (gcc for C extensions)
+RUN apt-get update && apt-get install -y --no-install-recommends gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Install Python deps (cached layer)
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy application
 COPY app.py .
 COPY app/ app/
 COPY templates/ templates/
 COPY static/ static/
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && \
-    chown -R app:app /app
-USER app
+# Non-root user
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /app
+USER appuser
 
-# Set environment variables
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
-ENV PORT=8080
+# Environment (PORT is set by Cloud Run at runtime)
+ENV FLASK_APP=app.py \
+    FLASK_ENV=production \
+    PORT=8080
 
-# Expose port (Cloud Run will set PORT env var)
-EXPOSE $PORT
+EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:$PORT/ || exit 1
+# Health check using Python (curl not available in slim)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')" || exit 1
 
-# Use gunicorn for production with optimized settings
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 --preload app:app
+# Gunicorn production server
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 --preload app:app
