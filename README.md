@@ -9,12 +9,6 @@
 
 ---
 
-## Live Demo
-
-**[GO TO APP](https://stock-screen-25476982226.us-central1.run.app/)**
-
----
-
 ## Features
 
 ### Market Sentiment Analysis
