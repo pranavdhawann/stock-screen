@@ -4,11 +4,8 @@
 # ============================================================
 
 # --- Core backend logic (HIDE) ---
-app/routes/
-app/services/
-app/config.py
-app/__init__.py
-app.py
+app/
+wsgi.py
 
 # --- Database & cache ---
 supabase_schema.sql
@@ -73,6 +70,10 @@ htmlcov/
 
 # --- Model / ML caches ---
 model_cache/
+
+# --- Assets (logo, images) ---
+logo/
+static/images/
 
 # --- Temp artifacts ---
 all_files*.txt

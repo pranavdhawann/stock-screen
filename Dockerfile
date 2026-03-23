@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application
-COPY app.py .
+COPY wsgi.py .
 COPY app/ app/
 COPY templates/ templates/
 COPY static/ static/
@@ -24,7 +24,7 @@ RUN useradd --create-home --shell /bin/bash appuser && \
 USER appuser
 
 # Environment (PORT is set by Cloud Run at runtime)
-ENV FLASK_APP=app.py \
+ENV FLASK_APP=wsgi.py \
     FLASK_ENV=production \
     PORT=8080
 
@@ -35,4 +35,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')" || exit 1
 
 # Gunicorn production server
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 --preload app:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 --preload wsgi:app

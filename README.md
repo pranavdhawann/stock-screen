@@ -1,26 +1,105 @@
-# Stock Screen
+# Stock Screen — AI-Powered Stock Sentiment & Market Intelligence
 
-AI-powered stock analysis and market sentiment platform with real-time news aggregation, SEC filing intelligence, and predictive forecasting.
+**Real-time stock analysis, news sentiment scoring, SEC filing intelligence, and AI forecasting — all in one terminal-style dashboard.**
 
-[![Live](https://img.shields.io/badge/Live-Stock%20Screen-brightgreen?style=flat-square)](https://stock-sentiment-app-egc2jnomta-uc.a.run.app)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-
-## What it does
-
-- Real-time market sentiment analysis across US and Indian stocks
-- Multi-source financial news aggregation and AI scoring
-- SEC EDGAR filing summaries powered by large language models
-- AI forecasting engine with Graph Neural Networks *(coming soon)*
-- Interactive price charts and sentiment trend visualization
-
-## Tech
-
-Python, Flask, AI/ML, cloud-hosted. See `.env.example` for configuration.
-
-## License
-
-MIT. Not financial advice.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-stock--screen-FFD700?style=for-the-badge&logo=google-cloud&logoColor=white)](https://stock-screen-25476982226.us-central1.run.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-Production-000000?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com)
 
 ---
 
-Use the contact form on the app for inquiries.
+## Live Demo
+
+**[stock-screen-25476982226.us-central1.run.app](https://stock-screen-25476982226.us-central1.run.app/)**
+
+---
+
+## Features
+
+### Market Sentiment Analysis
+Analyze any US or Indian stock with AI-powered sentiment scoring. Aggregates news from multiple sources, scores each article, and produces an overall bullish/bearish/neutral verdict with confidence levels.
+
+### Multi-Source News Aggregation
+Pulls financial news from Google RSS, MarketWatch, Finnhub, and Currents API. Deduplicates, ranks by relevance, and presents a unified news feed per ticker.
+
+### SEC Filing Intelligence
+Search and summarize SEC EDGAR filings (10-K, 10-Q, 8-K) using large language models. Get AI-generated overviews of a company's latest regulatory disclosures.
+
+### Interactive Charts
+Price charts with 30-day, 1-year, and 5-year views. Sentiment trend overlays. Powered by Chart.js.
+
+### AI Forecasting Engine *(Coming Soon)*
+Graph Neural Networks combining price patterns, news sentiment, stock correlations, SEC filings, and time-series data for directional predictions.
+
+### Bloomberg Terminal Aesthetic
+Dark, monospace, data-dense UI designed for fast scanning — inspired by professional trading terminals.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.11, Flask, Gunicorn |
+| AI/ML | Groq LLM API, NLP sentiment analysis |
+| Data | Yahoo Finance, Finnhub, Currents API, SEC EDGAR |
+| Database | Supabase (PostgreSQL) with persistent caching |
+| Frontend | Jinja2, Bootstrap 5, Chart.js, vanilla JS |
+| Deploy | Docker, Google Cloud Run, Cloud Build |
+
+---
+
+## Configuration
+
+Copy `.env.example` and fill in your API keys:
+
+```
+cp .env.example .env
+```
+
+See `.env.example` for all required and optional environment variables.
+
+---
+
+## Deployment
+
+Dockerized and deployed on Google Cloud Run. The `Dockerfile` is included for reference.
+
+```bash
+# Build
+docker build -t stock-screen .
+
+# Run locally
+docker run -p 8080:8080 --env-file .env stock-screen
+```
+
+---
+
+## Project Structure
+
+```
+static/          → CSS, JavaScript (client-side)
+templates/       → Jinja2 HTML templates
+Dockerfile       → Production container config
+requirements.txt → Python dependencies
+.env.example     → Environment variable template
+```
+
+> Backend source (routes, services, config) is not included in this repository.
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+**Disclaimer:** Stock Screen is for informational and educational purposes only. It is not financial advice. Always do your own research before making investment decisions.
+
+---
+
+<p align="center">
+  <a href="https://stock-screen-25476982226.us-central1.run.app/">
+    <strong>Try the Live Demo</strong>
+  </a>
+</p>
