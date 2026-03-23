@@ -34,32 +34,6 @@ Graph Neural Networks combining price patterns, news sentiment, stock correlatio
 
 ---
 
-## Configuration
-
-Copy `.env.example` and fill in your API keys:
-
-```
-cp .env.example .env
-```
-
-See `.env.example` for all required and optional environment variables.
-
----
-
-## Deployment
-
-Dockerized and deployed on Google Cloud Run. The `Dockerfile` is included for reference.
-
-```bash
-# Build
-docker build -t stock-screen .
-
-# Run locally
-docker run -p 8080:8080 --env-file .env stock-screen
-```
-
----
-
 ## Project Structure
 
 ```
