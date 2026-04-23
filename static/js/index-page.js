@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsSection = document.getElementById('resultsSection');
     const progressSection = document.getElementById('progressSection');
     const errorMessage = document.getElementById('errorMessage');
+    const stockPageTitle = document.getElementById('stockPageTitle');
+    const backToMarketsBtn = document.getElementById('backToMarketsBtn');
     
     let searchTimeout;
     let currentAutocompleteIndex = -1;
@@ -86,6 +88,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return '';
     }
+
+    function positionFloatingDropdown(dropdown) {
+        if (!dropdown || !searchInput) return;
+        const rect = searchInput.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = `${rect.left}px`;
+        dropdown.style.top = `${rect.bottom + 2}px`;
+        dropdown.style.width = `${rect.width}px`;
+        dropdown.style.maxWidth = `${rect.width}px`;
+        dropdown.style.zIndex = '5000';
+        dropdown.style.transform = 'none';
+        dropdown.style.inset = 'auto';
+    }
+
+    function showSampleStocksDropdown() {
+        if (!sampleStocksDropdown) return;
+        positionFloatingDropdown(sampleStocksDropdown);
+        sampleStocksDropdown.style.display = 'block';
+        setTimeout(() => {
+            if (sampleStocksDropdown) {
+                sampleStocksDropdown.classList.add('show');
+            }
+        }, 10);
+    }
+
+    function hideSampleStocksDropdown() {
+        if (!sampleStocksDropdown) return;
+        sampleStocksDropdown.classList.remove('show');
+        setTimeout(() => {
+            if (sampleStocksDropdown) {
+                sampleStocksDropdown.style.display = 'none';
+            }
+        }, 300);
+    }
     
     // Load default market data on page load (US markets by default)
     loadDefaultMarkets('US');
@@ -116,6 +152,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear any error messages
             if (errorMessage) {
                 errorMessage.classList.add('d-none');
+            }
+
+            switchTab('main');
+            if (window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname);
             }
             
             // Scroll to top
@@ -170,6 +211,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     loadStockDropdown();
 
+    window.addEventListener('resize', function() {
+        if (sampleStocksDropdown && sampleStocksDropdown.style.display === 'block') {
+            positionFloatingDropdown(sampleStocksDropdown);
+        }
+        if (autocompleteDropdown && autocompleteDropdown.style.display === 'block') {
+            positionFloatingDropdown(autocompleteDropdown);
+        }
+    });
+
+    window.addEventListener('scroll', function() {
+        if (sampleStocksDropdown && sampleStocksDropdown.style.display === 'block') {
+            positionFloatingDropdown(sampleStocksDropdown);
+        }
+        if (autocompleteDropdown && autocompleteDropdown.style.display === 'block') {
+            positionFloatingDropdown(autocompleteDropdown);
+        }
+    }, true);
+
     
     // Show sample stocks when clicking on search input and clear existing results
     searchInput.addEventListener('focus', function() {
@@ -177,12 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         autoReset();
         
         if (this.value.trim() === '' && sampleStocksDropdown) {
-            sampleStocksDropdown.style.display = 'block';
-            setTimeout(() => {
-                if (sampleStocksDropdown) {
-                    sampleStocksDropdown.classList.add('show');
-                }
-            }, 10);
+            showSampleStocksDropdown();
         }
     });
     
@@ -192,12 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.value = '';
             autoReset();
             if (sampleStocksDropdown) {
-                sampleStocksDropdown.style.display = 'block';
-                setTimeout(() => {
-                    if (sampleStocksDropdown) {
-                        sampleStocksDropdown.classList.add('show');
-                    }
-                }, 10);
+                showSampleStocksDropdown();
             }
         }
     });
@@ -205,12 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hide sample stocks when clicking outside
     document.addEventListener('click', function(e) {
         if (sampleStocksDropdown && !searchInput.contains(e.target) && !sampleStocksDropdown.contains(e.target)) {
-            sampleStocksDropdown.classList.remove('show');
-            setTimeout(() => {
-                if (sampleStocksDropdown) {
-                    sampleStocksDropdown.style.display = 'none';
-                }
-            }, 300);
+            hideSampleStocksDropdown();
         }
     });
     
@@ -220,10 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('dropdown-item')) {
             const symbol = e.target.dataset.symbol;
             searchInput.value = symbol;
-            sampleStocksDropdown.classList.remove('show');
-            setTimeout(() => {
-            sampleStocksDropdown.style.display = 'none';
-            }, 300);
+            hideSampleStocksDropdown();
             analyzeSentiment(symbol);
         }
     });
@@ -240,10 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Hide sample stocks when typing
-        sampleStocksDropdown.classList.remove('show');
-        setTimeout(() => {
-        sampleStocksDropdown.style.display = 'none';
-        }, 300);
+        hideSampleStocksDropdown();
         
         if (query.length < 1) {
             dismissAutocomplete();
@@ -273,7 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <strong>${escapeHtml(stock.symbol)}</strong> - ${escapeHtml(stock.name)}
             </div>
         `).join('');
-        
+
+        positionFloatingDropdown(autocompleteDropdown);
         autocompleteDropdown.style.display = 'block';
         currentAutocompleteIndex = -1;
 
@@ -319,6 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }) : '--:--';
             const sentimentLabel = escapeHtml(getDisplaySentiment(item?.sentiment || 'Unknown'));
             const sentimentClass = getSentimentBadgeColor(item?.sentiment || 'Unknown');
+            const showSentimentBadge = !(container.id === 'marketHeadlines' && sentimentLabel === 'N/A');
             const safeLink = sanitizeUrl(item?.link);
             const safeAriaTitle = escapeHtml(`Read full article: ${titleRaw.slice(0, 50)}...`);
 
@@ -333,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="news-snippet mb-1">${escapeHtml(summaryTrimmed)}</p>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="publisher">${publisher}</span>
-                                <span class="badge ${sentimentClass} sentiment-pill sentiment-badge">${sentimentLabel}</span>
+                                ${showSentimentBadge ? `<span class="badge ${sentimentClass} sentiment-pill sentiment-badge">${sentimentLabel}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -357,6 +397,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission (prevent default form behavior)
     sentimentForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        const symbol = sanitizeSymbol(searchInput.value).toUpperCase();
+        if (!symbol) return;
+        analyzeSentiment(symbol);
     });
     
     // Global error handler for async listener errors (browser extensions)
@@ -388,9 +431,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tab === 'main') {
             if (mainTabContent) mainTabContent.style.display = '';
             if (newsTabContent) newsTabContent.style.display = 'none';
+            if (window.location.hash === '#news') {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
         } else if (tab === 'news') {
             if (mainTabContent) mainTabContent.style.display = 'none';
             if (newsTabContent) newsTabContent.style.display = '';
+            if (window.location.hash !== '#news') {
+                window.history.replaceState(null, '', '#news');
+            }
         }
     }
 
@@ -407,6 +456,12 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         // Mark Markets as active by default
         switchTab('main');
+    }
+
+    if (backToMarketsBtn) {
+        backToMarketsBtn.addEventListener('click', function() {
+            switchTab('main');
+        });
     }
 
     // News feed functionality
@@ -591,7 +646,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const marketsHtml = markets.map(market => {
             const isPositive = Number(market.price_change || 0) >= 0;
             const changeClass = isPositive ? 'text-success' : 'text-danger';
-            const changeIcon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
             const safeSymbol = sanitizeSymbol(market.symbol);
             const safeCurrency = escapeHtml(market.currency || '$');
             const currentPrice = Number(market.current_price || 0);
@@ -605,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="market-price">
                             <div class="price-value">${safeCurrency}${currentPrice.toLocaleString()}</div>
                             <div class="price-change ${changeClass}">
-                                <i class="fas ${changeIcon} me-1"></i>
+                                
                                 ${safeCurrency}${Math.abs(priceChange).toFixed(2)} (${Math.abs(priceChangePercent).toFixed(2)}%)
                             </div>
                         </div>
@@ -928,6 +982,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function analyzeSentiment(symbol) {
+        const cleanSymbol = sanitizeSymbol(symbol).toUpperCase();
+        if (!cleanSymbol) {
+            showError('Please enter a stock symbol.');
+            return;
+        }
+
+        if (searchInput) {
+            searchInput.value = cleanSymbol;
+        }
+
+        switchTab('news');
+
         // Show progress bar
         progressSection.style.display = 'block';
         progressSection.classList.remove('d-none');
@@ -958,11 +1024,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
 
         // Parallel fetch: Finnhub news (localStorage-cached) + yfinance sentiment analysis
-        const finnhubPromise = fetchFinnhubNews(symbol);
+        const finnhubPromise = fetchFinnhubNews(cleanSymbol);
         const sentimentPromise = fetch('/api/analyze_sentiment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol: symbol }),
+            body: JSON.stringify({ symbol: cleanSymbol }),
         }).then(r => r.json());
 
         Promise.all([sentimentPromise, finnhubPromise])
@@ -1034,6 +1100,12 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSymbol = data.symbol || '';
         currentCurrency = data.currency || '$';
 
+        if (stockPageTitle) {
+            const titleSymbol = escapeHtml(data.symbol || '');
+            const titleCompany = escapeHtml(data.company_name || '');
+            stockPageTitle.innerHTML = `${titleCompany ? `${titleCompany} (${titleSymbol})` : `${titleSymbol} ANALYSIS`}`;
+        }
+
         // Reset chart range toggle to 30D
         if (chartRangeToggle) {
             chartRangeToggle.querySelectorAll('.chart-range-btn').forEach(b => b.classList.remove('active'));
@@ -1089,26 +1161,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
      function displayLegacyInsights(el, insights) {
          const marketOutlook = escapeHtml(insights.market_outlook || '');
-         const opportunities = (insights.opportunities || []).map(opp => `<li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>${escapeHtml(opp)}</li>`).join('');
-         const keyPoints = (insights.key_points || []).map(point => `<li class="mb-2"><i class="fas fa-bullseye text-warning me-2"></i>${escapeHtml(point)}</li>`).join('');
-         const riskFactors = (insights.risk_factors || []).map(risk => `<li class="mb-2"><i class="fas fa-exclamation-circle text-danger me-2"></i>${escapeHtml(risk)}</li>`).join('');
+         const opportunities = (insights.opportunities || []).map(opp => `<li class="mb-2">${escapeHtml(opp)}</li>`).join('');
+         const keyPoints = (insights.key_points || []).map(point => `<li class="mb-2">${escapeHtml(point)}</li>`).join('');
+         const riskFactors = (insights.risk_factors || []).map(risk => `<li class="mb-2">${escapeHtml(risk)}</li>`).join('');
 
          el.innerHTML = `
              <div class="row">
                  <div class="col-md-6 mb-4">
-                     <h6 class="text-primary mb-3"><i class="fas fa-chart-line me-2"></i>Market Outlook</h6>
+                     <h6 class="text-primary mb-3">Market Outlook</h6>
                      <p class="mb-3">${marketOutlook}</p>
-                     <h6 class="text-success mb-3"><i class="fas fa-arrow-up me-2"></i>Opportunities</h6>
+                     <h6 class="text-success mb-3">Opportunities</h6>
                       <ul class="list-unstyled">
                          ${opportunities}
                      </ul>
                  </div>
                  <div class="col-md-6 mb-4">
-                     <h6 class="text-warning mb-3"><i class="fas fa-key me-2"></i>Key Points</h6>
+                     <h6 class="text-warning mb-3">Key Points</h6>
                      <ul class="list-unstyled">
                          ${keyPoints}
                      </ul>
-                     <h6 class="text-danger mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors</h6>
+                     <h6 class="text-danger mb-3">Risk Factors</h6>
                      <ul class="list-unstyled">
                          ${riskFactors}
                      </ul>
@@ -1124,18 +1196,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
          // Direction helpers
          function dirIcon(d) {
-             if (d === 'up') return '<i class="fas fa-arrow-up text-success me-1"></i>';
-             if (d === 'down') return '<i class="fas fa-arrow-down text-danger me-1"></i>';
-             return '<i class="fas fa-minus text-warning me-1"></i>';
+             if (d === 'up') return '';
+             if (d === 'down') return '';
+             return '';
          }
          function sevBadge(s) {
              const cls = s === 'High' ? 'bg-danger' : s === 'Medium' ? 'bg-warning text-dark' : 'bg-secondary';
              return `<span class="badge ${cls} severity-badge">${escapeHtml(s)}</span>`;
          }
          function trendIcon(t) {
-             if (t === 'improving') return '<i class="fas fa-trending-up text-success me-2"></i>';
-             if (t === 'declining') return '<i class="fas fa-trending-down text-danger me-2"></i>';
-             return '<i class="fas fa-minus text-warning me-2"></i>';
+             if (t === 'improving') return '';
+             if (t === 'declining') return '';
+             return '';
          }
 
          // Build catalysts
@@ -1150,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', function() {
          // Build risks
          const risksHtml = (ins.risks || []).map(r => `
              <div class="risk-item mb-2">
-                 <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                 
                  ${sevBadge(r.severity || 'Low')}
                  <span class="ms-2">${escapeHtml(r.text || '')}</span>
              </div>
@@ -1177,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                          <span class="badge ${confBadge} verdict-badge">${escapeHtml(v.confidence_label || 'Low')} confidence</span>
                      </div>
                      <button class="btn btn-sm btn-outline-secondary copy-report-btn" title="Copy report to clipboard">
-                         <i class="fas fa-copy me-1"></i>Copy
+                         Copy
                      </button>
                  </div>
                  <p class="mb-1 fw-bold" style="font-size: 1.1em;">${escapeHtml(v.one_liner || '')}</p>
@@ -1188,11 +1260,11 @@ document.addEventListener('DOMContentLoaded', function() {
              <!-- Catalysts + Risks -->
              <div class="row mb-3">
                  <div class="col-md-6 mb-3 mb-md-0">
-                     <h6 class="text-success mb-3"><i class="fas fa-rocket me-2"></i>POSITIVES</h6>
+                     <h6 class="text-success mb-3">POSITIVES</h6>
                      ${catalystsHtml}
                  </div>
                  <div class="col-md-6">
-                     <h6 class="text-danger mb-3"><i class="fas fa-shield-alt me-2"></i>RISKS</h6>
+                     <h6 class="text-danger mb-3">RISKS</h6>
                      ${risksHtml}
                  </div>
              </div>
@@ -1200,7 +1272,7 @@ document.addEventListener('DOMContentLoaded', function() {
              <!-- Source Breakdown -->
              <div class="row mb-3">
                  <div class="col-md-12">
-                     <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>SOURCE BREAKDOWN</h6>
+                     <h6 class="mb-2">SOURCE BREAKDOWN</h6>
                      <div class="source-bar mb-2">
                          ${bullPct > 0 ? `<div class="source-bar-bull" style="width:${bullPct}%" title="Bullish ${bullPct}%"></div>` : ''}
                          ${neuPct > 0 ? `<div class="source-bar-neu" style="width:${neuPct}%" title="Neutral ${neuPct}%"></div>` : ''}
@@ -1247,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
          navigator.clipboard.writeText(text).then(() => {
              const orig = btn.innerHTML;
-             btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied';
+             btn.innerHTML = 'Copied';
              setTimeout(() => { btn.innerHTML = orig; }, 2000);
          });
      }

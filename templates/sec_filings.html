@@ -58,7 +58,7 @@
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Search
+                            Search
                         </button>
                     </form>
                 </div>
@@ -86,7 +86,7 @@
                 <!-- AI Overview Card -->
                 <div class="card card-enhanced mb-4" id="overviewCard">
                     <div class="card-body p-4">
-                        <h6 class="mb-3"><i class="fas fa-brain me-2" style="color: var(--accent-blue);"></i>AI Filing Overview</h6>
+                        <h6 class="mb-3">AI Filing Overview</h6>
                         <div id="overviewLoading" class="text-center py-3">
                             <span class="terminal-cursor">GENERATING OVERVIEW</span>
                         </div>
@@ -117,7 +117,7 @@
                 <!-- Filing Timeline Chart -->
                 <div class="card card-enhanced mb-4" id="timelineCard">
                     <div class="card-body">
-                        <h6 class="mb-3"><i class="fas fa-timeline me-2"></i>Filing Timeline</h6>
+                        <h6 class="mb-3">Filing Timeline</h6>
                         <div style="height: 200px; cursor: pointer;" title="Click to expand">
                             <canvas id="filingTimeline"></canvas>
                         </div>
@@ -329,10 +329,10 @@
                                     data-filing-url="${encodedUrl}"
                                     data-filing-type="${safeForm}"
                                     data-action="summarize-filing">
-                                <i class="fas fa-brain me-1"></i>Summarize
+                                Summarize
                             </button>
                             ${safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-external-link-alt me-1"></i>View
+                                View
                             </a>` : ''}
                         </div>
                     </div>

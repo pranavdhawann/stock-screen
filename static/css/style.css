@@ -274,9 +274,17 @@ body::after {
 .status-label {
     font-family: var(--font-mono);
     font-size: 0.6rem;
-    color: var(--negative);
+    color: var(--text-muted);
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+
+.status-label.open {
+    color: var(--positive);
+}
+
+.status-label.closed {
+    color: var(--negative);
 }
 
 .nav-hamburger {
@@ -496,6 +504,17 @@ body::after {
     border-color: var(--accent-amber) !important;
 }
 
+/* Keep the home-page screener dropdown floating over following cards */
+.card.search-overlay-card,
+.card.search-overlay-card .card-body {
+    overflow: visible !important;
+}
+
+.card.search-overlay-card {
+    position: relative;
+    z-index: calc(var(--z-dropdown) + 2);
+}
+
 .card-body {
     color: var(--text-primary);
     padding: 12px 16px;
@@ -515,6 +534,7 @@ body::after {
    ============================================================ */
 .search-box-enhanced {
     position: relative;
+    z-index: calc(var(--z-dropdown) + 1);
 }
 
 .input-group,
@@ -579,7 +599,7 @@ body::after {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     max-height: 350px;
     overflow-y: auto;
-    z-index: var(--z-dropdown);
+    z-index: calc(var(--z-dropdown) + 3);
 }
 
 .dropdown-item {
@@ -612,7 +632,7 @@ body::after {
     margin-top: 0;
     max-height: 300px;
     overflow-y: auto;
-    z-index: var(--z-dropdown);
+    z-index: calc(var(--z-dropdown) + 3);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
