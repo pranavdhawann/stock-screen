@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}SEC Filings - Stock Screen{% endblock %}
+{% block title %}Company Filings - Stock Screen{% endblock %}
 
 {% block seo %}
-<meta name="description" content="Search and analyze SEC 10-K, 10-Q, and 8-K filings from EDGAR. Get AI-generated summaries and visual filing timelines for any US-listed company.">
-<meta property="og:title" content="SEC Filings - Stock Screen">
-<meta property="og:description" content="Search and analyze SEC filings with AI-generated summaries and visual timelines.">
+<meta name="description" content="Search and analyze US SEC filings or Indian BSE and NSE filings with AI-generated summaries and filing timelines.">
+<meta property="og:title" content="Company Filings - Stock Screen">
+<meta property="og:description" content="Search and analyze US SEC filings or Indian BSE and NSE filings with AI-generated summaries and visual timelines.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Stock Screen">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SEC Filings - Stock Screen">
-<meta name="twitter:description" content="Search and analyze SEC filings with AI-generated summaries and visual timelines.">
+<meta name="twitter:title" content="Company Filings - Stock Screen">
+<meta name="twitter:description" content="Search and analyze US SEC filings or Indian BSE and NSE filings with AI-generated summaries and visual timelines.">
 {% endblock %}
 
 {% block content %}
@@ -18,10 +18,13 @@
     <div class="container">
         <div class="row justify-content-center text-center">
             <div class="col-lg-10">
-                <h1 class="main-title">SEC Filings</h1>
-                <p class="main-subtitle">
+                <h1 class="main-title" id="filingsPageTitle">Company Filings</h1>
+                <p class="main-subtitle" id="filingsPageSubtitle">
                     Search and analyze 10-K, 10-Q, and 8-K filings from SEC EDGAR
                 </p>
+                <div class="mt-3">
+                    <span id="filingsMarketBadge" class="badge bg-secondary">US Market Mode</span>
+                </div>
             </div>
         </div>
     </div>
@@ -41,24 +44,28 @@
                             <div id="secAutocompleteDropdown" class="autocomplete-dropdown" style="display: none;"></div>
                         </div>
                         <div>
-                            <label class="form-label">Filing Types</label>
+                            <label class="form-label" id="filingTypesLabel">Filing Types</label>
                             <div class="d-flex gap-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="10-K" id="type10K" checked>
-                                    <label class="form-check-label" for="type10K">10-K</label>
+                                    <input class="form-check-input filing-type-input" type="checkbox" value="10-K" id="filingType1" checked>
+                                    <label class="form-check-label" for="filingType1" id="filingTypeLabel1">10-K</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="10-Q" id="type10Q" checked>
-                                    <label class="form-check-label" for="type10Q">10-Q</label>
+                                    <input class="form-check-input filing-type-input" type="checkbox" value="10-Q" id="filingType2" checked>
+                                    <label class="form-check-label" for="filingType2" id="filingTypeLabel2">10-Q</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="8-K" id="type8K" checked>
-                                    <label class="form-check-label" for="type8K">8-K</label>
+                                    <input class="form-check-input filing-type-input" type="checkbox" value="8-K" id="filingType3" checked>
+                                    <label class="form-check-label" for="filingType3" id="filingTypeLabel3">8-K</label>
+                                </div>
+                                <div class="form-check" id="filingTypeGroup4">
+                                    <input class="form-check-input filing-type-input" type="checkbox" value="" id="filingType4">
+                                    <label class="form-check-label" for="filingType4" id="filingTypeLabel4"></label>
                                 </div>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Search
+                            Search
                         </button>
                     </form>
                 </div>
@@ -68,7 +75,7 @@
 
     <!-- Loading -->
     <div id="secLoading" class="text-center d-none py-3">
-        <span class="terminal-cursor">FETCHING FILINGS FROM SEC EDGAR</span>
+        <span id="secLoadingText" class="terminal-cursor">FETCHING FILINGS FROM SEC EDGAR</span>
     </div>
 
     <!-- Error -->
@@ -86,7 +93,7 @@
                 <!-- AI Overview Card -->
                 <div class="card card-enhanced mb-4" id="overviewCard">
                     <div class="card-body p-4">
-                        <h6 class="mb-3"><i class="fas fa-brain me-2" style="color: var(--accent-blue);"></i>AI Filing Overview</h6>
+                        <h6 class="mb-3">AI Filing Overview</h6>
                         <div id="overviewLoading" class="text-center py-3">
                             <span class="terminal-cursor">GENERATING OVERVIEW</span>
                         </div>
@@ -117,7 +124,7 @@
                 <!-- Filing Timeline Chart -->
                 <div class="card card-enhanced mb-4" id="timelineCard">
                     <div class="card-body">
-                        <h6 class="mb-3"><i class="fas fa-timeline me-2"></i>Filing Timeline</h6>
+                        <h6 class="mb-3">Filing Timeline</h6>
                         <div style="height: 200px; cursor: pointer;" title="Click to expand">
                             <canvas id="filingTimeline"></canvas>
                         </div>
@@ -156,10 +163,41 @@
     let typeDoughnutChart = null;
     let yearBarChart = null;
     let currentCompanyName = '';
+    let currentMarket = 'US';
     let secSearchTimeout = null;
 
-    const TYPE_COLORS = { '10-K': '#FFA500', '10-Q': '#00D4FF', '8-K': '#00FF88' };
+    const TYPE_COLORS = {
+        '10-K': '#FFA500',
+        '10-Q': '#00D4FF',
+        '8-K': '#00FF88',
+        'Annual Report': '#00D4FF',
+        'Financial Results': '#00FF88',
+        'Corporate Announcement': '#FFA500',
+        'Shareholding Pattern': '#F472B6',
+    };
+    const TYPE_DISPLAY_LABELS = {
+        'Annual Report': 'Annual',
+        'Financial Results': 'Results',
+        'Corporate Announcement': 'Announcement',
+        'Shareholding Pattern': 'Shareholding',
+    };
     const AUTOCOMPLETE_DEBOUNCE_MS = 150;
+    const MARKET_CONFIGS = {
+        US: {
+            badge: 'US Market Mode',
+            subtitle: 'Search and analyze 10-K, 10-Q, and 8-K filings from SEC EDGAR',
+            placeholder: 'e.g. AAPL, MSFT, TSLA',
+            loading: 'FETCHING FILINGS FROM SEC EDGAR',
+            types: ['10-K', '10-Q', '8-K'],
+        },
+        IN: {
+            badge: 'India Market Mode',
+            subtitle: 'Search and analyze annual reports, results, and disclosures from BSE and NSE',
+            placeholder: 'e.g. INFY, RELIANCE, TCS',
+            loading: 'FETCHING FILINGS FROM BSE + NSE',
+            types: ['Annual Report', 'Financial Results', 'Corporate Announcement', 'Shareholding Pattern'],
+        },
+    };
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -182,9 +220,88 @@
         return '';
     }
 
+    function getTypeColor(type) {
+        return TYPE_COLORS[type] || '#64748B';
+    }
+
+    function getTypeDisplayLabel(type) {
+        return TYPE_DISPLAY_LABELS[type] || type;
+    }
+
+    function getTimelineTypes(filings) {
+        const configured = MARKET_CONFIGS[currentMarket].types;
+        const present = new Set(filings.map(f => f.form).filter(Boolean));
+        const ordered = configured.filter(type => present.has(type));
+        filings.forEach(f => {
+            if (f.form && !ordered.includes(f.form)) ordered.push(f.form);
+        });
+        return ordered;
+    }
+
+    function getTimelinePositionMap(types) {
+        return types.reduce((acc, type, index) => {
+            acc[type] = types.length - index;
+            return acc;
+        }, {});
+    }
+
+    function getSelectedMarket() {
+        const marketSelect = document.getElementById('marketSelect');
+        return marketSelect && marketSelect.value === 'IN' ? 'IN' : 'US';
+    }
+
+    function resetFilingsState() {
+        document.getElementById('secLoading').classList.add('d-none');
+        document.getElementById('secResults').classList.add('d-none');
+        document.getElementById('secError').classList.add('d-none');
+        document.getElementById('secError').textContent = '';
+        secAutocomplete.style.display = 'none';
+    }
+
+    function applyMarketConfig() {
+        currentMarket = getSelectedMarket();
+        const config = MARKET_CONFIGS[currentMarket];
+        document.getElementById('filingsMarketBadge').textContent = config.badge;
+        document.getElementById('filingsPageSubtitle').textContent = config.subtitle;
+        document.getElementById('secTickerInput').placeholder = config.placeholder;
+        document.getElementById('secLoadingText').textContent = config.loading;
+
+        const inputs = [
+            document.getElementById('filingType1'),
+            document.getElementById('filingType2'),
+            document.getElementById('filingType3'),
+            document.getElementById('filingType4'),
+        ];
+        const labels = [
+            document.getElementById('filingTypeLabel1'),
+            document.getElementById('filingTypeLabel2'),
+            document.getElementById('filingTypeLabel3'),
+            document.getElementById('filingTypeLabel4'),
+        ];
+
+        inputs.forEach((input, index) => {
+            const value = config.types[index];
+            const wrapper = input.closest('.form-check');
+            if (!value) {
+                wrapper.style.display = 'none';
+                input.checked = false;
+                input.value = '';
+                labels[index].textContent = '';
+                return;
+            }
+            wrapper.style.display = '';
+            input.value = value;
+            input.checked = true;
+            labels[index].textContent = value;
+        });
+
+        resetFilingsState();
+    }
+
     // Autocomplete for ticker input
     const secTickerInput = document.getElementById('secTickerInput');
     const secAutocomplete = document.getElementById('secAutocompleteDropdown');
+    applyMarketConfig();
 
     secTickerInput.addEventListener('input', function() {
         const query = this.value.trim();
@@ -196,7 +313,7 @@
         }
 
         secSearchTimeout = setTimeout(() => {
-            fetch(`/api/search_stocks?q=${encodeURIComponent(query)}`)
+            fetch(`/api/search_stocks?q=${encodeURIComponent(query)}&market=${currentMarket}`)
                 .then(r => r.json())
                 .then(results => {
                     if (results.length === 0) {
@@ -256,10 +373,9 @@
         const ticker = document.getElementById('secTickerInput').value.trim().toUpperCase();
         if (!ticker) return;
 
-        const types = [];
-        if (document.getElementById('type10K').checked) types.push('10-K');
-        if (document.getElementById('type10Q').checked) types.push('10-Q');
-        if (document.getElementById('type8K').checked) types.push('8-K');
+        const types = Array.from(document.querySelectorAll('.filing-type-input'))
+            .filter(input => input.checked && input.value)
+            .map(input => input.value);
 
         if (types.length === 0) {
             showError('Please select at least one filing type.');
@@ -281,7 +397,7 @@
         document.getElementById('secResults').classList.add('d-none');
         document.getElementById('secError').classList.add('d-none');
 
-        fetch(`/api/sec_filings?ticker=${ticker}&types=${types.join(',')}&count=15`)
+        fetch(`/api/sec_filings?ticker=${ticker}&market=${currentMarket}&types=${types.map(encodeURIComponent).join(',')}&count=15`)
             .then(r => r.json())
             .then(data => {
                 document.getElementById('secLoading').classList.add('d-none');
@@ -310,9 +426,9 @@
         // Render filing cards
         const container = document.getElementById('filingsCardList');
         container.innerHTML = data.filings.map((f) => {
-            const safeForm = ['10-K', '10-Q', '8-K'].includes(f.form) ? f.form : String(f.form || '').replace(/[^A-Za-z0-9-]/g, '');
-            const badgeColor = safeForm === '10-K' ? 'background:#6366F1;' :
-                               safeForm === '10-Q' ? 'background:#06B6D4;' : 'background:#F59E0B; color:#000;';
+            const safeForm = String(f.form || '').trim();
+            const badgeColor = `background:${getTypeColor(safeForm)}; color:#000;`;
+            const sourceLabel = escapeHtml(f.source || (currentMarket === 'IN' ? 'India' : 'SEC'));
             const date = new Date(f.filing_date).toLocaleDateString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric'
             });
@@ -322,6 +438,7 @@
                 <div class="card card-enhanced mb-2 filing-card">
                     <div class="card-body p-3 d-flex align-items-center gap-3 flex-wrap">
                         <span class="badge" style="${badgeColor} font-size: 0.8rem; padding: 6px 12px;">${escapeHtml(safeForm)}</span>
+                        <span class="badge bg-dark" style="font-size: 0.72rem; padding: 5px 10px;">${sourceLabel}</span>
                         <span class="text-muted" style="min-width: 100px; font-size: 0.9rem;">${escapeHtml(date)}</span>
                         <span class="flex-grow-1 text-muted" style="font-size: 0.9rem;">${escapeHtml(f.description || safeForm)}</span>
                         <div class="d-flex gap-2">
@@ -329,10 +446,10 @@
                                     data-filing-url="${encodedUrl}"
                                     data-filing-type="${safeForm}"
                                     data-action="summarize-filing">
-                                <i class="fas fa-brain me-1"></i>Summarize
+                                Summarize
                             </button>
                             ${safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-external-link-alt me-1"></i>View
+                                View
                             </a>` : ''}
                         </div>
                     </div>
@@ -371,10 +488,10 @@
             typeDoughnutChart = new Chart(doughnutCanvas.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: labels,
+                    labels: labels.map(l => getTypeDisplayLabel(l)),
                     datasets: [{
                         data: labels.map(l => typeCounts[l]),
-                        backgroundColor: labels.map(l => TYPE_COLORS[l] || '#64748B'),
+                        backgroundColor: labels.map(l => getTypeColor(l)),
                         borderWidth: 0,
                     }]
                 },
@@ -432,6 +549,7 @@
                 filings: data.filings,
                 company_name: data.company_name,
                 ticker: data.ticker,
+                market: currentMarket,
             }),
         })
         .then(r => r.json())
@@ -455,21 +573,24 @@
         if (filingTimelineChart) filingTimelineChart.destroy();
 
         const datasets = {};
+        const timelineTypes = getTimelineTypes(filings);
+        const timelinePositions = getTimelinePositionMap(timelineTypes);
         filings.forEach(f => {
             if (!datasets[f.form]) {
                 datasets[f.form] = {
-                    label: f.form, data: [],
-                    backgroundColor: TYPE_COLORS[f.form] || '#64748B',
-                    borderColor: TYPE_COLORS[f.form] || '#64748B',
+                    label: getTypeDisplayLabel(f.form), data: [], fullLabel: f.form,
+                    backgroundColor: getTypeColor(f.form),
+                    borderColor: getTypeColor(f.form),
                     borderWidth: 2, pointRadius: 6, pointHoverRadius: 8, showLine: false,
                 };
             }
             datasets[f.form].data.push({
                 x: new Date(f.filing_date),
-                y: f.form === '10-K' ? 3 : f.form === '10-Q' ? 2 : 1,
+                y: timelinePositions[f.form] || 1,
             });
         });
 
+        const yMax = Math.max(timelineTypes.length + 1, 2);
         filingTimelineChart = new Chart(canvas.getContext('2d'), {
             type: 'scatter',
             data: { datasets: Object.values(datasets) },
@@ -483,8 +604,16 @@
                         ticks: { color: '#666', font: { size: 10, family: "'JetBrains Mono', monospace" } },
                     },
                     y: {
-                        display: true, min: 0, max: 4,
-                        ticks: { stepSize: 1, color: '#666', font: { family: "'JetBrains Mono', monospace" }, callback: v => ({ 1: '8-K', 2: '10-Q', 3: '10-K' }[v] || '') },
+                        display: true, min: 0, max: yMax,
+                        ticks: {
+                            stepSize: 1,
+                            color: '#666',
+                            font: { family: "'JetBrains Mono', monospace", size: 10 },
+                            callback: v => {
+                                const match = Object.entries(timelinePositions).find(([, position]) => position === v);
+                                return match ? getTypeDisplayLabel(match[0]) : '';
+                            },
+                        },
                         grid: { color: 'rgba(42,45,53,0.5)' },
                     }
                 },
@@ -492,7 +621,7 @@
                     legend: { labels: { color: '#999', font: { size: 10, family: "'JetBrains Mono', monospace" } } },
                     tooltip: {
                         backgroundColor: '#0f1117', titleColor: '#FFA500', bodyColor: '#E8E8E8', borderColor: '#2a2d35', borderWidth: 1, cornerRadius: 0,
-                        callbacks: { label: ctx => `${ctx.dataset.label} - ${new Date(ctx.parsed.x).toLocaleDateString()}` }
+                        callbacks: { label: ctx => `${ctx.dataset.fullLabel || ctx.dataset.label} - ${new Date(ctx.parsed.x).toLocaleDateString()}` }
                     }
                 }
             }
@@ -509,7 +638,7 @@
         fetch('/api/sec_filing_summary', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, filing_type: filingType, company_name: currentCompanyName }),
+            body: JSON.stringify({ url, filing_type: filingType, company_name: currentCompanyName, market: currentMarket }),
         })
         .then(r => r.json())
         .then(data => {
@@ -526,7 +655,12 @@
         });
     }
 
-    // Chart expansion for SEC filing charts
+    const marketSelect = document.getElementById('marketSelect');
+    if (marketSelect) {
+        marketSelect.addEventListener('change', applyMarketConfig);
+    }
+
+    // Chart expansion for company filing charts
     function expandChart(canvasId, title) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;

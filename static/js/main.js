@@ -8,15 +8,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (hamburger && navLinks) {
         hamburger.addEventListener('click', function() {
             navLinks.classList.toggle('show');
-            const icon = this.querySelector('i');
-            icon.className = navLinks.classList.contains('show') ? 'fas fa-times' : 'fas fa-bars';
+            this.textContent = navLinks.classList.contains('show') ? 'CLOSE' : 'MENU';
         });
 
         navLinks.querySelectorAll('.nav-link-item').forEach(link => {
             link.addEventListener('click', function() {
                 if (window.innerWidth <= 768) {
                     navLinks.classList.remove('show');
-                    hamburger.querySelector('i').className = 'fas fa-bars';
+                    hamburger.textContent = 'MENU';
                 }
             });
         });
@@ -24,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('resize', function() {
             if (window.innerWidth > 768) {
                 navLinks.classList.remove('show');
-                hamburger.querySelector('i').className = 'fas fa-bars';
+                hamburger.textContent = 'MENU';
             }
         });
     }
@@ -124,16 +123,77 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Weekend / market closed indicator
+    // Market hours indicator (US and India)
     const statusDot = document.getElementById('statusDot');
     const statusLabel = document.getElementById('statusLabel');
+    const marketSelect = document.getElementById('marketSelect');
     if (statusDot && statusLabel) {
-        const day = new Date().getDay();
-        if (day === 0 || day === 6) {
-            statusDot.classList.add('closed');
-            statusDot.title = 'Market Closed';
-            statusLabel.textContent = 'MARKET CLOSED';
+        const MARKET_RULES = {
+            US: {
+                label: 'US',
+                timeZone: 'America/New_York',
+                openMinutes: 9 * 60 + 30,
+                closeMinutes: 16 * 60,
+            },
+            IN: {
+                label: 'IN',
+                timeZone: 'Asia/Kolkata',
+                openMinutes: 9 * 60 + 15,
+                closeMinutes: 15 * 60 + 30,
+            },
+        };
+
+        const marketClockFormatters = {
+            US: new Intl.DateTimeFormat('en-US', {
+                timeZone: MARKET_RULES.US.timeZone,
+                weekday: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23',
+            }),
+            IN: new Intl.DateTimeFormat('en-US', {
+                timeZone: MARKET_RULES.IN.timeZone,
+                weekday: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23',
+            }),
+        };
+
+        function getMarketClockParts(marketCode) {
+            const parts = marketClockFormatters[marketCode].formatToParts(new Date());
+            const extracted = {};
+            parts.forEach(part => {
+                extracted[part.type] = part.value;
+            });
+            return {
+                weekday: extracted.weekday,
+                hour: Number(extracted.hour || 0),
+                minute: Number(extracted.minute || 0),
+            };
         }
+
+        function updateMarketStatusIndicator() {
+            const selectedMarket = marketSelect && marketSelect.value === 'IN' ? 'IN' : 'US';
+            const rules = MARKET_RULES[selectedMarket];
+            const clock = getMarketClockParts(selectedMarket);
+            const minutesNow = clock.hour * 60 + clock.minute;
+            const isWeekend = clock.weekday === 'Sat' || clock.weekday === 'Sun';
+            const isOpen = !isWeekend && minutesNow >= rules.openMinutes && minutesNow < rules.closeMinutes;
+
+            statusDot.classList.toggle('closed', !isOpen);
+            statusLabel.classList.toggle('open', isOpen);
+            statusLabel.classList.toggle('closed', !isOpen);
+            statusLabel.textContent = `${rules.label} ${isOpen ? 'OPEN' : 'CLOSED'}`;
+            statusDot.title = isOpen ? `${rules.label} Market Open` : `${rules.label} Market Closed`;
+        }
+
+        updateMarketStatusIndicator();
+
+        if (marketSelect) {
+            marketSelect.addEventListener('change', updateMarketStatusIndicator);
+        }
+        setInterval(updateMarketStatusIndicator, 60 * 1000);
     }
 });
 

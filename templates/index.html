@@ -39,7 +39,7 @@
                     <!-- Market Overview Header -->
                     <div class="mb-4">
                         <h4 class="text-uppercase fw-bold mb-1" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
-                            <i class="fas fa-chart-line me-2"></i>MARKET OVERVIEW
+                            MARKET OVERVIEW
                         </h4>
                     </div>
 
@@ -50,11 +50,57 @@
                         </div>
                     </div>
 
+                    <!-- Stock Search -->
+                    <div class="mt-4">
+                        <div class="card card-enhanced search-overlay-card">
+                            <div class="card-body p-4 p-lg-5">
+                                <h4 class="text-uppercase fw-bold mb-4" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
+                                    STOCK SCREENER
+                                </h4>
+                                <form id="sentimentForm" class="mb-3">
+                                    <div class="search-box-enhanced">
+                                        <div class="input-group input-group-xl">
+                                            <span class="input-group-text search-icon">
+                                                
+                                            </span>
+                                            <input type="text"
+                                                   class="form-control search-input"
+                                                   id="stockSearch"
+                                                   placeholder="Enter stock symbol or company name (e.g., AAPL, TSLA, Microsoft)"
+                                                   autocomplete="off"
+                                                   data-bs-toggle="dropdown"
+                                                   data-bs-auto-close="false">
+                                        </div>
+                                        <div class="dropdown-menu w-100" id="sampleStocksDropdown">
+                                            <div id="usStocksSection"></div>
+                                            <div id="indianStocksSection" style="display: none;"></div>
+                                        </div>
+                                        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                                    </div>
+                                </form>
+                                <div id="quickSuggestions" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);">
+                                    <span style="color: var(--accent-amber);">POPULAR:</span>
+                                    <span class="quick-pick" data-symbol="AAPL" style="cursor: pointer; margin-left: 8px; color: var(--accent-cyan);">AAPL</span>
+                                    <span style="color: var(--border); margin: 0 4px;">|</span>
+                                    <span class="quick-pick" data-symbol="TSLA" style="cursor: pointer; color: var(--accent-cyan);">TSLA</span>
+                                    <span style="color: var(--border); margin: 0 4px;">|</span>
+                                    <span class="quick-pick" data-symbol="MSFT" style="cursor: pointer; color: var(--accent-cyan);">MSFT</span>
+                                    <span style="color: var(--border); margin: 0 4px;">|</span>
+                                    <span class="quick-pick" data-symbol="GOOGL" style="cursor: pointer; color: var(--accent-cyan);">GOOGL</span>
+                                    <span style="color: var(--border); margin: 0 4px;">|</span>
+                                    <span class="quick-pick" data-symbol="AMZN" style="cursor: pointer; color: var(--accent-cyan);">AMZN</span>
+                                    <span style="color: var(--border); margin: 0 4px;">|</span>
+                                    <span class="quick-pick" data-symbol="NVDA" style="cursor: pointer; color: var(--accent-cyan);">NVDA</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Market Headlines -->
                     <div class="mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h4 class="text-uppercase fw-bold mb-0" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
-                                <i class="fas fa-newspaper me-2"></i>MARKET HEADLINES
+                                MARKET HEADLINES
                             </h4>
                             <span id="headlinesLastUpdated" style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted);"></span>
                         </div>
@@ -78,50 +124,13 @@
                 <div class="col-lg-10">
                     <div class="card card-enhanced">
                         <div class="card-body p-5">
-                            <!-- Section Header -->
-                            <h4 class="text-uppercase fw-bold mb-4" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
-                                <i class="fas fa-search me-2"></i>STOCK SCREENER
-                            </h4>
-
-                            <!-- Search Form -->
-                            <form id="sentimentForm" class="mb-4">
-                                <div class="search-box-enhanced">
-                                    <div class="input-group input-group-xl">
-                                        <span class="input-group-text search-icon">
-                                            <i class="fas fa-search"></i>
-                                        </span>
-                                        <input type="text"
-                                               class="form-control search-input"
-                                               id="stockSearch"
-                                               placeholder="Enter stock symbol or company name (e.g., AAPL, TSLA, Microsoft)"
-                                               autocomplete="off"
-                                               data-bs-toggle="dropdown"
-                                               data-bs-auto-close="false">
-                                    </div>
-                                    <!-- Sample stocks dropdown (populated dynamically from /api/stock_list) -->
-                                    <div class="dropdown-menu w-100" id="sampleStocksDropdown">
-                                        <div id="usStocksSection"></div>
-                                        <div id="indianStocksSection" style="display: none;"></div>
-                                    </div>
-                                    <!-- Autocomplete Dropdown -->
-                                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
-                                </div>
-                            </form>
-
-                            <!-- Quick Suggestions -->
-                            <div id="quickSuggestions" class="mb-4" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);">
-                                <span style="color: var(--accent-amber);">POPULAR:</span>
-                                <span class="quick-pick" data-symbol="AAPL" style="cursor: pointer; margin-left: 8px; color: var(--accent-cyan);">AAPL</span>
-                                <span style="color: var(--border); margin: 0 4px;">|</span>
-                                <span class="quick-pick" data-symbol="TSLA" style="cursor: pointer; color: var(--accent-cyan);">TSLA</span>
-                                <span style="color: var(--border); margin: 0 4px;">|</span>
-                                <span class="quick-pick" data-symbol="MSFT" style="cursor: pointer; color: var(--accent-cyan);">MSFT</span>
-                                <span style="color: var(--border); margin: 0 4px;">|</span>
-                                <span class="quick-pick" data-symbol="GOOGL" style="cursor: pointer; color: var(--accent-cyan);">GOOGL</span>
-                                <span style="color: var(--border); margin: 0 4px;">|</span>
-                                <span class="quick-pick" data-symbol="AMZN" style="cursor: pointer; color: var(--accent-cyan);">AMZN</span>
-                                <span style="color: var(--border); margin: 0 4px;">|</span>
-                                <span class="quick-pick" data-symbol="NVDA" style="cursor: pointer; color: var(--accent-cyan);">NVDA</span>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 id="stockPageTitle" class="text-uppercase fw-bold mb-0" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
+                                    STOCK NEWS ANALYSIS
+                                </h4>
+                                <button id="backToMarketsBtn" type="button" class="btn btn-sm btn-outline-secondary" style="font-family: var(--font-mono); font-size: 0.7rem;">
+                                    BACK
+                                </button>
                             </div>
 
                             <!-- Loading Spinner -->
@@ -166,7 +175,7 @@
                                                 <div class="chart-container" style="position: relative; cursor: pointer;" title="Click to expand chart">
                                                     <canvas id="priceSentimentChart" width="400" height="280"></canvas>
                                                     <div class="chart-expand-overlay" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 8px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity 0.3s;">
-                                                        <i class="fas fa-expand"></i>
+                                                        
                                                     </div>
                                                 </div>
                                             </div>
@@ -177,7 +186,7 @@
                                  <!-- Summarized Insights -->
                                  <div class="mt-4">
                                      <h4 class="mb-3">
-                                         <i class="fas fa-lightbulb text-warning me-2"></i>
+                                         
                                          <span class="text-uppercase fw-bold">SUMMARIZED INSIGHTS</span>
                                      </h4>
                                      <div class="card">
@@ -204,7 +213,7 @@
 
                             <!-- Error Message -->
                             <div id="errorMessage" class="alert alert-danger d-none" role="alert">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                
                                 <span id="errorText"></span>
                             </div>
                         </div>
