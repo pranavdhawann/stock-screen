@@ -3,14 +3,14 @@
 {% block title %}Forecasting - Stock Screen{% endblock %}
 
 {% block seo %}
-<meta name="description" content="Stock Screen Forecasting — AI-powered stock prediction using Graph Neural Networks, news sentiment, and multimodal analysis. Coming soon.">
+<meta name="description" content="Stock Screen Forecasting - live LSTM-based short-horizon price forecasts from 60-day OHLCV windows.">
 <meta property="og:title" content="Forecasting - Stock Screen">
-<meta property="og:description" content="AI-powered stock prediction using Graph Neural Networks and multimodal analysis.">
+<meta property="og:description" content="Run live LSTM-based short-horizon stock forecasts from 60-day OHLCV history.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Stock Screen">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Forecasting - Stock Screen">
-<meta name="twitter:description" content="AI-powered stock prediction using Graph Neural Networks and multimodal analysis.">
+<meta name="twitter:description" content="Live LSTM-based short-horizon stock forecasts from 60-day OHLCV windows.">
 {% endblock %}
 
 {% block content %}
@@ -19,173 +19,123 @@
         <div class="row justify-content-center text-center">
             <div class="col-lg-10">
                 <h1 class="main-title">Forecasting</h1>
-                <p class="main-subtitle">Predictive intelligence for the markets</p>
             </div>
         </div>
     </div>
 </div>
 
 <div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 text-center">
-
-            <!-- Coming Soon Badge -->
-            <div style="margin-bottom: 32px;">
-                <span style="font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #000; background: var(--accent-amber); padding: 3px 12px; font-weight: 700;">COMING SOON</span>
-            </div>
-
-            <!-- Main Card -->
+    <div class="row g-4 justify-content-center">
+        <div class="col-lg-8">
             <div class="card card-enhanced">
-                <div class="card-header" style="padding: 10px 16px;">
-                    <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-amber); text-transform: uppercase; letter-spacing: 0.1em;">
-                        FORECASTING ENGINE
-                    </span>
+                <div class="card-header d-flex justify-content-between align-items-center" style="padding: 10px 16px;">
+                    <span>Forecast Runner</span>
+                    <span id="forecastUsageLabel" style="font-size: 0.68rem; color: var(--text-muted);">1 free run remaining</span>
                 </div>
-                <div class="card-body" style="padding: 40px 32px; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.8;">
-                    <p style="color: var(--text-primary); margin-bottom: 24px;">
-                        We're building something powerful. Our upcoming forecasting engine
-                        combines a Graph Neural Network with multimodal AI &mdash; meaning it
-                        reads price patterns, live news sentiment, stock correlations,
-                        SEC filings, and time series data all at once to predict where
-                        a stock is heading.
-                    </p>
-                    <p style="color: var(--text-secondary); margin-bottom: 32px;">
-                        No single signal. No guesswork. Everything, together.
-                    </p>
-
-                    <!-- Feature Grid -->
-                    <div class="row g-3 text-start" style="margin-bottom: 32px;">
-                        <div class="col-sm-6">
-                            <div style="border: 1px solid var(--border); padding: 14px 16px;">
-                                <div style="color: var(--accent-amber); font-size: 0.7rem; letter-spacing: 0.1em; margin-bottom: 6px;">PRICE PATTERNS</div>
-                                <div style="color: var(--text-muted); font-size: 0.78rem;">Technical signals decoded by deep learning</div>
-                            </div>
+                <div class="card-body" style="padding: 28px 24px;">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label for="forecastTicker" class="form-label">Select Stock</label>
+                            <select id="forecastTicker" class="form-select" style="border-radius: 0; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border); font-family: var(--font-mono);">
+                                <option value="">Loading stocks...</option>
+                            </select>
                         </div>
-                        <div class="col-sm-6">
-                            <div style="border: 1px solid var(--border); padding: 14px 16px;">
-                                <div style="color: var(--accent-amber); font-size: 0.7rem; letter-spacing: 0.1em; margin-bottom: 6px;">NEWS SENTIMENT</div>
-                                <div style="color: var(--text-muted); font-size: 0.78rem;">Real-time headlines analyzed for market impact</div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div style="border: 1px solid var(--border); padding: 14px 16px;">
-                                <div style="color: var(--accent-amber); font-size: 0.7rem; letter-spacing: 0.1em; margin-bottom: 6px;">STOCK CORRELATIONS</div>
-                                <div style="color: var(--text-muted); font-size: 0.78rem;">Graph Neural Network maps inter-stock relationships</div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div style="border: 1px solid var(--border); padding: 14px 16px;">
-                                <div style="color: var(--accent-amber); font-size: 0.7rem; letter-spacing: 0.1em; margin-bottom: 6px;">SEC FILINGS</div>
-                                <div style="color: var(--text-muted); font-size: 0.78rem;">10-K, 10-Q, 8-K parsed for forward-looking signals</div>
-                            </div>
+                        <div class="col-md-4">
+                            <button id="runForecastBtn" class="btn btn-primary w-100" style="height: 41px;">Run Forecast</button>
                         </div>
                     </div>
 
-                    <!-- Notify Me Section -->
-                    <div id="notifySection">
-                        <button class="btn btn-outline-primary" id="notifyBtn" style="border-radius: 0; font-family: var(--font-mono); font-size: 0.8rem; padding: 10px 32px; letter-spacing: 0.05em;">
-                            NOTIFY ME
-                        </button>
+                    <div id="forecastLoading" class="alert alert-info mt-4" style="display: none;">
+                        <div class="terminal-cursor">Running LSTM forecast</div>
                     </div>
 
-                    <!-- Email Input (hidden initially) -->
-                    <div id="notifyForm" style="display: none; max-width: 400px; margin: 0 auto;">
-                        <div style="display: flex; gap: 8px;">
-                            <input type="email" id="waitlistEmail" placeholder="your@email.com"
-                                style="flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.8rem; padding: 10px 14px; outline: none;"
-                                autocomplete="email">
-                            <button id="waitlistSubmit" style="background: var(--accent-amber); color: #000; border: none; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; padding: 10px 20px; cursor: pointer; letter-spacing: 0.05em; white-space: nowrap;">
-                                JOIN
-                            </button>
+                    <div id="forecastError" class="alert alert-danger mt-4" style="display: none;"></div>
+
+                    <div id="forecastEmpty" class="alert alert-warning mt-4" style="margin-bottom: 0;">
+                        Select a stock and run the model to generate a live short-horizon price forecast.
+                    </div>
+
+                    <div id="forecastResults" style="display: none; margin-top: 24px;">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Selected Stock</div>
+                                    <div id="forecastSymbolLine" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent-amber);"></div>
+                                    <div id="forecastMetaLine" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Latest Close</div>
+                                    <div id="forecastLastClose" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.2rem;"></div>
+                                    <div id="forecastAsOf" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Predicted 5 day Close</div>
+                                    <div id="forecastNextClose" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.2rem; color: var(--accent-amber);"></div>
+                                    <div id="forecastNextMove" style="margin-top: 4px; font-size: 0.8rem;"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="waitlistError" style="display: none; color: var(--negative); font-size: 0.75rem; margin-top: 8px; text-align: left;"></div>
-                    </div>
 
-                    <!-- Success Message (hidden initially) -->
-                    <div id="notifySuccess" style="display: none;">
-                        <div style="color: var(--positive); font-size: 0.85rem;">
-                            You're on the list! Check your inbox.
+                        <div class="card mb-3" style="border-radius: 0;">
+                            <div class="card-header" style="padding: 10px 16px;">Projected Path</div>
+                            <div class="card-body" style="padding: 16px;">
+                                <div class="chart-container" style="max-width: 100%; min-height: 320px; margin: 0;">
+                                    <canvas id="forecastChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Duplicate Message (hidden initially) -->
-                    <div id="notifyDuplicate" style="display: none;">
-                        <div style="color: var(--accent-amber); font-size: 0.85rem;">
-                            You're already on the list!
+                        <div class="card" style="border-radius: 0;">
+                            <div class="card-header" style="padding: 10px 16px;">Forecast Horizon</div>
+                            <div class="card-body" style="padding: 0;">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Step</th>
+                                                <th>Date</th>
+                                                <th>Predicted Close</th>
+                                                <th>Predicted Move</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="forecastTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="col-lg-4">
+            <div class="card card-enhanced">
+                <div class="card-header" style="padding: 10px 16px;">Run Policy</div>
+                <div class="card-body" style="padding: 24px 20px; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.8;">
+                    <div style="border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 14px;">
+                        <div style="color: var(--accent-amber); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;">Free Access</div>
+                        <div style="color: var(--text-secondary);">Each user gets 1 free forecast run. After that, forecasting is subscription-gated.</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Pricing Section -->
-    <div class="row justify-content-center mt-5">
-        <div class="col-lg-10">
-            <div class="card card-enhanced">
-                <div class="card-header" style="padding: 10px 16px;">
-                    <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-amber); text-transform: uppercase; letter-spacing: 0.1em;">PRICING</span>
-                </div>
-                <div class="card-body" style="font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.7; padding: 32px 24px;">
-                    <div class="row g-4 justify-content-center">
-
-                        <!-- Free Tier -->
-                        <div class="col-md-4">
-                            <div style="border: 1px solid var(--border); padding: 28px 20px; text-align: center; height: 100%;">
-                                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px;">FREE</div>
-                                <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">$0</div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">forever</div>
-                                <ul style="list-style: none; padding: 0; margin: 24px 0 0 0; font-size: 0.78rem; color: var(--text-secondary); text-align: left;">
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> Real-time news aggregation</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> AI sentiment analysis</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> SEC filing summaries</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> Market overview charts</li>
-                                    <li style="padding: 5px 0; color: var(--text-muted);"><span style="color: var(--text-muted);">&#10007;</span> Forecasting engine</li>
-                                    <li style="padding: 5px 0; color: var(--text-muted);"><span style="color: var(--text-muted);">&#10007;</span> Export reports</li>
-                                </ul>
-                                <div style="margin-top: 20px; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em;">CURRENT PLAN</div>
-                            </div>
-                        </div>
-
-                        <!-- Pro Monthly -->
-                        <div class="col-md-4">
-                            <div style="border: 1px solid var(--border); padding: 28px 20px; text-align: center; height: 100%;">
-                                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-amber); margin-bottom: 12px;">PRO &mdash; MONTHLY</div>
-                                <div style="font-size: 2rem; font-weight: 700; color: var(--accent-amber);">$19<span style="font-size: 1rem; color: var(--text-muted);">.99</span></div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">per month</div>
-                                <ul style="list-style: none; padding: 0; margin: 24px 0 0 0; font-size: 0.78rem; color: var(--text-secondary); text-align: left;">
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> Everything in Free</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> GNN forecasting engine</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Predictive alerts</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Priority API access</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Export reports</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Extended historical data</li>
-                                </ul>
-                                <button class="btn btn-outline-primary w-100 mt-3" style="border-radius: 0; font-family: var(--font-mono); font-size: 0.75rem;" disabled>COMING SOON</button>
-                            </div>
-                        </div>
-
-                        <!-- Pro Yearly -->
-                        <div class="col-md-4">
-                            <div style="border: 1px solid var(--accent-amber); padding: 28px 20px; text-align: center; height: 100%; position: relative;">
-                                <div style="position: absolute; top: -10px; right: 12px; background: var(--accent-amber); color: #000; font-size: 0.6rem; font-weight: 700; padding: 2px 8px; letter-spacing: 0.05em;">SAVE 2 MONTHS</div>
-                                <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-amber); margin-bottom: 12px;">PRO &mdash; YEARLY</div>
-                                <div style="font-size: 2rem; font-weight: 700; color: var(--accent-amber);">$200</div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">per year <span style="text-decoration: line-through;">$239.88</span></div>
-                                <ul style="list-style: none; padding: 0; margin: 24px 0 0 0; font-size: 0.78rem; color: var(--text-secondary); text-align: left;">
-                                    <li style="padding: 5px 0;"><span style="color: var(--positive);">&#10003;</span> Everything in Pro Monthly</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> 2 months free</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Early access to new features</li>
-                                    <li style="padding: 5px 0;"><span style="color: var(--accent-amber);">&#10003;</span> Priority support</li>
-                                </ul>
-                                <button class="btn btn-primary w-100 mt-3" style="border-radius: 0; font-family: var(--font-mono); font-size: 0.75rem;" disabled>COMING SOON</button>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
+<div id="forecastGateModal" class="chart-modal" style="display: none;">
+    <div class="chart-modal-content" style="max-width: 460px;">
+        <div class="chart-modal-header">
+            <h5 class="modal-title">Subscription Required</h5>
+            <button id="forecastGateClose" class="chart-modal-close" type="button">&times;</button>
+        </div>
+        <div class="chart-modal-body" style="font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.8;">
+            <p style="margin-bottom: 14px;">You've already used your free forecast run.</p>
+            <p style="margin-bottom: 18px; color: var(--text-secondary);">Subscribe to continue running live forecasts. Checkout flow will be added separately.</p>
+            <button id="forecastGateAcknowledge" class="btn btn-primary">Understood</button>
         </div>
     </div>
 </div>
@@ -194,71 +144,299 @@
 {% block extra_scripts %}
 <script>
 (function() {
-    const notifyBtn = document.getElementById('notifyBtn');
-    const notifyForm = document.getElementById('notifyForm');
-    const notifySection = document.getElementById('notifySection');
-    const notifySuccess = document.getElementById('notifySuccess');
-    const notifyDuplicate = document.getElementById('notifyDuplicate');
-    const emailInput = document.getElementById('waitlistEmail');
-    const submitBtn = document.getElementById('waitlistSubmit');
-    const errorEl = document.getElementById('waitlistError');
+    const STORAGE_KEY = 'stockscreen.forecasting.freeRunsUsed';
+    const FREE_RUN_LIMIT = 1;
 
-    // Show email input on Notify Me click
-    notifyBtn.addEventListener('click', function() {
-        notifySection.style.display = 'none';
-        notifyForm.style.display = '';
-        emailInput.focus();
-    });
+    const tickerSelect = document.getElementById('forecastTicker');
+    const runButton = document.getElementById('runForecastBtn');
+    const usageLabel = document.getElementById('forecastUsageLabel');
+    const loadingEl = document.getElementById('forecastLoading');
+    const errorEl = document.getElementById('forecastError');
+    const emptyEl = document.getElementById('forecastEmpty');
+    const resultsEl = document.getElementById('forecastResults');
+    const symbolLineEl = document.getElementById('forecastSymbolLine');
+    const metaLineEl = document.getElementById('forecastMetaLine');
+    const lastCloseEl = document.getElementById('forecastLastClose');
+    const asOfEl = document.getElementById('forecastAsOf');
+    const nextCloseEl = document.getElementById('forecastNextClose');
+    const nextMoveEl = document.getElementById('forecastNextMove');
+    const tableBodyEl = document.getElementById('forecastTableBody');
+    const forecastChartCanvas = document.getElementById('forecastChart');
+    const gateModal = document.getElementById('forecastGateModal');
+    const gateCloseBtn = document.getElementById('forecastGateClose');
+    const gateAcknowledgeBtn = document.getElementById('forecastGateAcknowledge');
+    let forecastChart = null;
 
-    // Submit handler
-    function submitWaitlist() {
-        const email = emailInput.value.trim();
-        errorEl.style.display = 'none';
+    function isLocalTesting() {
+        return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    }
 
-        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-            errorEl.textContent = 'Please enter a valid email address.';
-            errorEl.style.display = '';
+    function getRunsUsed() {
+        try {
+            return parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
+        } catch (err) {
+            return 0;
+        }
+    }
+
+    function setRunsUsed(value) {
+        try {
+            localStorage.setItem(STORAGE_KEY, String(value));
+        } catch (err) {
+            return;
+        }
+    }
+
+    function hasFreeRunRemaining() {
+        return getRunsUsed() < FREE_RUN_LIMIT;
+    }
+
+    function updateUsageLabel() {
+        if (isLocalTesting()) {
+            usageLabel.textContent = 'Local testing mode';
+            return;
+        }
+        const remaining = Math.max(FREE_RUN_LIMIT - getRunsUsed(), 0);
+        usageLabel.textContent = remaining > 0
+            ? remaining + ' free run remaining'
+            : 'Free run used';
+    }
+
+    function setLoading(isLoading) {
+        runButton.disabled = isLoading;
+        runButton.textContent = isLoading ? 'Running...' : 'Run Forecast';
+        loadingEl.style.display = isLoading ? '' : 'none';
+    }
+
+    function setError(message) {
+        if (!message) {
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            return;
+        }
+        errorEl.textContent = message;
+        errorEl.style.display = '';
+    }
+
+    function showGateModal() {
+        gateModal.style.display = 'flex';
+        gateModal.classList.add('active');
+    }
+
+    function hideGateModal() {
+        gateModal.classList.remove('active');
+        gateModal.style.display = 'none';
+    }
+
+    function formatPrice(currency, value) {
+        return currency + Number(value).toFixed(2);
+    }
+
+    function renderForecastChart(data) {
+        if (!forecastChartCanvas || typeof Chart === 'undefined') {
             return;
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = '...';
+        const labels = [data.as_of].concat((data.predictions || []).map(function(item) {
+            return item.date;
+        }));
+        const values = [data.last_close].concat((data.predictions || []).map(function(item) {
+            return item.predicted_close;
+        }));
 
-        fetch('/api/waitlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email }),
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.status === 'ok') {
-                notifyForm.style.display = 'none';
-                notifySuccess.style.display = '';
-            } else if (data.status === 'duplicate') {
-                notifyForm.style.display = 'none';
-                notifyDuplicate.style.display = '';
-            } else {
-                errorEl.textContent = data.error || 'Something went wrong. Please try again.';
-                errorEl.style.display = '';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'JOIN';
-            }
-        })
-        .catch(function() {
-            errorEl.textContent = 'Network error. Please try again.';
-            errorEl.style.display = '';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'JOIN';
+        if (forecastChart) {
+            forecastChart.destroy();
+        }
+
+        forecastChart = new Chart(forecastChartCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: data.symbol + ' projected close',
+                    data: values,
+                    borderColor: '#FFA500',
+                    backgroundColor: 'rgba(255, 165, 0, 0.14)',
+                    pointBackgroundColor: '#FFA500',
+                    pointBorderColor: '#0a0a0a',
+                    pointRadius: 4,
+                    pointHoverRadius: 5,
+                    pointBorderWidth: 1.5,
+                    tension: 0.28,
+                    fill: true,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f1117',
+                        borderColor: '#2a2d35',
+                        borderWidth: 1,
+                        titleColor: '#FFA500',
+                        bodyColor: '#E8E8E8',
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Close: ' + formatPrice(data.currency, context.parsed.y);
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(42, 45, 53, 0.6)',
+                        },
+                        ticks: {
+                            color: '#999',
+                            font: {
+                                family: 'JetBrains Mono',
+                                size: 11,
+                            },
+                        },
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(42, 45, 53, 0.6)',
+                        },
+                        ticks: {
+                            color: '#999',
+                            font: {
+                                family: 'JetBrains Mono',
+                                size: 11,
+                            },
+                            callback: function(value) {
+                                return formatPrice(data.currency, value);
+                            },
+                        },
+                    },
+                },
+            },
         });
     }
 
-    submitBtn.addEventListener('click', submitWaitlist);
-    emailInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            submitWaitlist();
+    function renderForecast(data) {
+        const firstPrediction = data.predictions && data.predictions.length ? data.predictions[0] : null;
+        const delta = firstPrediction ? firstPrediction.predicted_close - data.last_close : 0;
+
+        symbolLineEl.textContent = data.symbol + ' - ' + data.company_name;
+        metaLineEl.textContent = data.market + ' market - ' + data.lookback_days + '-day lookback - ' + data.horizon + '-day horizon';
+        lastCloseEl.textContent = formatPrice(data.currency, data.last_close);
+        asOfEl.textContent = 'As of ' + data.as_of;
+        nextCloseEl.textContent = firstPrediction ? formatPrice(data.currency, firstPrediction.predicted_close) : 'N/A';
+        nextMoveEl.textContent = firstPrediction
+            ? ((delta >= 0 ? '+' : '') + delta.toFixed(2) + ' (' + (firstPrediction.predicted_return_pct >= 0 ? '+' : '') + firstPrediction.predicted_return_pct.toFixed(2) + '%)')
+            : 'No prediction available';
+        nextMoveEl.style.color = delta >= 0 ? 'var(--positive)' : 'var(--negative)';
+
+        tableBodyEl.innerHTML = (data.predictions || []).map(function(item) {
+            const moveColor = item.predicted_return_pct >= 0 ? 'var(--positive)' : 'var(--negative)';
+            const moveLabel = (item.predicted_return_pct >= 0 ? '+' : '') + item.predicted_return_pct.toFixed(2) + '%';
+            return `
+                <tr>
+                    <td>Day +${item.step}</td>
+                    <td>${item.date}</td>
+                    <td>${formatPrice(data.currency, item.predicted_close)}</td>
+                    <td style="color: ${moveColor};">${moveLabel}</td>
+                </tr>
+            `;
+        }).join('');
+
+        emptyEl.style.display = 'none';
+        resultsEl.style.display = '';
+        renderForecastChart(data);
+    }
+
+    function populateStocks() {
+        fetch('/api/stock_list')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                const usOptions = (data.US || []).map(function(stock) {
+                    return `<option value="${stock.symbol}">${stock.symbol} - ${stock.name}</option>`;
+                }).join('');
+                const inOptions = (data.IN || []).map(function(stock) {
+                    return `<option value="${stock.symbol}">${stock.symbol} - ${stock.name}</option>`;
+                }).join('');
+                tickerSelect.innerHTML = `
+                    <option value="">Choose a stock</option>
+                    <optgroup label="US Markets">${usOptions}</optgroup>
+                    <optgroup label="India Markets">${inOptions}</optgroup>
+                `;
+            })
+            .catch(function() {
+                tickerSelect.innerHTML = '<option value="">Unable to load stocks</option>';
+                setError('Unable to load the stock list right now.');
+            });
+    }
+
+    function runForecast() {
+        const symbol = tickerSelect.value;
+        setError('');
+
+        if (!symbol) {
+            setError('Select a stock before running the forecast.');
+            return;
+        }
+
+        if (!isLocalTesting() && !hasFreeRunRemaining()) {
+            showGateModal();
+            return;
+        }
+
+        setLoading(true);
+        fetch('/api/forecast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: symbol }),
+        })
+        .then(function(response) {
+            return response.json().then(function(payload) {
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Forecast generation failed.');
+                }
+                return payload;
+            });
+        })
+        .then(function(data) {
+            if (!isLocalTesting()) {
+                setRunsUsed(getRunsUsed() + 1);
+                updateUsageLabel();
+            }
+            renderForecast(data);
+        })
+        .catch(function(error) {
+            setError(error.message || 'Forecast generation failed.');
+        })
+        .finally(function() {
+            setLoading(false);
+        });
+    }
+
+    runButton.addEventListener('click', runForecast);
+    gateCloseBtn.addEventListener('click', hideGateModal);
+    gateAcknowledgeBtn.addEventListener('click', hideGateModal);
+    gateModal.addEventListener('click', function(event) {
+        if (event.target === gateModal) {
+            hideGateModal();
         }
     });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && gateModal.style.display === 'flex') {
+            hideGateModal();
+        }
+    });
+
+    updateUsageLabel();
+    populateStocks();
 })();
 </script>
 {% endblock %}

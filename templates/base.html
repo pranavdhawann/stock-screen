@@ -46,12 +46,6 @@
     <!-- Top Navigation Bar -->
     <nav class="top-nav" id="topNav">
         <div class="top-nav-inner">
-            <div class="nav-brand">
-                <a href="{{ url_for('main.home') }}">
-                    <span class="brand-text">STOCK SCREEN</span>
-                </a>
-            </div>
-
             <div class="nav-links" id="navLinks">
                 <a class="nav-link-item" href="{{ url_for('main.home') }}" data-tab="main">
                     <span>Markets</span>
@@ -78,11 +72,10 @@
                     <span class="status-dot" id="statusDot" title="Connected"></span>
                     <span class="status-label" id="statusLabel"></span>
                 </div>
+                <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
+                    MENU
+                </button>
             </div>
-
-            <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
-                MENU
-            </button>
         </div>
     </nav>
 

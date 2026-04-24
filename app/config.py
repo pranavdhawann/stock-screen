@@ -82,39 +82,40 @@ STOCK_DIRECTORY = [
     {"symbol": "BA", "name": "Boeing Company"},
     {"symbol": "CAT", "name": "Caterpillar Inc."},
     # Indian Stocks
-    {"symbol": "TCS", "name": "Tata Consultancy Services Ltd."},
-    {"symbol": "INFY", "name": "Infosys Ltd."},
-    {"symbol": "WIPRO", "name": "Wipro Ltd."},
-    {"symbol": "HCLTECH", "name": "HCL Technologies Ltd."},
-    {"symbol": "TECHM", "name": "Tech Mahindra Ltd."},
-    {"symbol": "HDFCBANK", "name": "HDFC Bank Ltd."},
-    {"symbol": "ICICIBANK", "name": "ICICI Bank Ltd."},
-    {"symbol": "KOTAKBANK", "name": "Kotak Mahindra Bank Ltd."},
-    {"symbol": "AXISBANK", "name": "Axis Bank Ltd."},
-    {"symbol": "SBIN", "name": "State Bank of India"},
-    {"symbol": "RELIANCE", "name": "Reliance Industries Ltd."},
-    {"symbol": "HINDUNILVR", "name": "Hindustan Unilever Ltd."},
-    {"symbol": "ITC", "name": "ITC Ltd."},
-    {"symbol": "BHARTIARTL", "name": "Bharti Airtel Ltd."},
-    {"symbol": "MARUTI", "name": "Maruti Suzuki India Ltd."},
-    {"symbol": "SUNPHARMA", "name": "Sun Pharmaceutical Industries Ltd."},
-    {"symbol": "DRREDDY", "name": "Dr. Reddy's Laboratories Ltd."},
-    {"symbol": "CIPLA", "name": "Cipla Ltd."},
-    {"symbol": "DIVISLAB", "name": "Divi's Laboratories Ltd."},
-    {"symbol": "BIOCON", "name": "Biocon Ltd."},
-    {"symbol": "ONGC", "name": "Oil and Natural Gas Corporation Ltd."},
-    {"symbol": "IOC", "name": "Indian Oil Corporation Ltd."},
-    {"symbol": "BPCL", "name": "Bharat Petroleum Corporation Ltd."},
-    {"symbol": "ADANIGREEN", "name": "Adani Green Energy Ltd."},
-    {"symbol": "TATAPOWER", "name": "Tata Power Company Ltd."},
-    {"symbol": "ZOMATO", "name": "Zomato Ltd."},
-    {"symbol": "PAYTM", "name": "One97 Communications Ltd."},
-    {"symbol": "POLICYBZR", "name": "PB Fintech Ltd."},
-    {"symbol": "NAZARA", "name": "Nazara Technologies Ltd."},
+    {"symbol": "TCS", "name": "Tata Consultancy Services Ltd.", "bse_code": "532540"},
+    {"symbol": "INFY", "name": "Infosys Ltd.", "bse_code": "500209"},
+    {"symbol": "WIPRO", "name": "Wipro Ltd.", "bse_code": "507685"},
+    {"symbol": "HCLTECH", "name": "HCL Technologies Ltd.", "bse_code": "532281"},
+    {"symbol": "TECHM", "name": "Tech Mahindra Ltd.", "bse_code": "532755"},
+    {"symbol": "HDFCBANK", "name": "HDFC Bank Ltd.", "bse_code": "500180"},
+    {"symbol": "ICICIBANK", "name": "ICICI Bank Ltd.", "bse_code": "532174"},
+    {"symbol": "KOTAKBANK", "name": "Kotak Mahindra Bank Ltd.", "bse_code": "500247"},
+    {"symbol": "AXISBANK", "name": "Axis Bank Ltd.", "bse_code": "532215"},
+    {"symbol": "SBIN", "name": "State Bank of India", "bse_code": "500112"},
+    {"symbol": "RELIANCE", "name": "Reliance Industries Ltd.", "bse_code": "500325"},
+    {"symbol": "HINDUNILVR", "name": "Hindustan Unilever Ltd.", "bse_code": "500696"},
+    {"symbol": "ITC", "name": "ITC Ltd.", "bse_code": "500875"},
+    {"symbol": "BHARTIARTL", "name": "Bharti Airtel Ltd.", "bse_code": "532454"},
+    {"symbol": "MARUTI", "name": "Maruti Suzuki India Ltd.", "bse_code": "532500"},
+    {"symbol": "SUNPHARMA", "name": "Sun Pharmaceutical Industries Ltd.", "bse_code": "524715"},
+    {"symbol": "DRREDDY", "name": "Dr. Reddy's Laboratories Ltd.", "bse_code": "500124"},
+    {"symbol": "CIPLA", "name": "Cipla Ltd.", "bse_code": "500087"},
+    {"symbol": "DIVISLAB", "name": "Divi's Laboratories Ltd.", "bse_code": "532488"},
+    {"symbol": "BIOCON", "name": "Biocon Ltd.", "bse_code": "532523"},
+    {"symbol": "ONGC", "name": "Oil and Natural Gas Corporation Ltd.", "bse_code": "500312"},
+    {"symbol": "IOC", "name": "Indian Oil Corporation Ltd.", "bse_code": "530965"},
+    {"symbol": "BPCL", "name": "Bharat Petroleum Corporation Ltd.", "bse_code": "500547"},
+    {"symbol": "ADANIGREEN", "name": "Adani Green Energy Ltd.", "bse_code": "541450"},
+    {"symbol": "TATAPOWER", "name": "Tata Power Company Ltd.", "bse_code": "500400"},
+    {"symbol": "ZOMATO", "name": "Zomato Ltd.", "bse_code": "543320"},
+    {"symbol": "PAYTM", "name": "One97 Communications Ltd.", "bse_code": "543396"},
+    {"symbol": "POLICYBZR", "name": "PB Fintech Ltd.", "bse_code": "543390"},
+    {"symbol": "NAZARA", "name": "Nazara Technologies Ltd.", "bse_code": "543280"},
 ]
 
 # Precomputed lookup: symbol -> name
 _COMPANY_NAMES = {s["symbol"]: s["name"] for s in STOCK_DIRECTORY}
+_STOCKS_BY_SYMBOL = {s["symbol"]: s for s in STOCK_DIRECTORY}
 
 # Market index definitions
 MARKET_INDICES = {
@@ -131,6 +132,10 @@ MARKET_INDICES = {
 
 def get_company_name(symbol):
     return _COMPANY_NAMES.get(symbol, f"{symbol} Corporation")
+
+
+def get_stock_metadata(symbol):
+    return _STOCKS_BY_SYMBOL.get(symbol.upper(), {})
 
 
 def is_indian_stock(symbol):

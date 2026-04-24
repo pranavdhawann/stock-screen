@@ -7,7 +7,7 @@ from app.config import (
     RESEND_API_KEY, CURRENTS_API_KEY, FINNHUB_API_KEY,
     EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
 )
-from app.services import stock_data, news, sentiment, insights, sec_edgar, news_aggregator
+from app.services import bse_filings, stock_data, news, sentiment, insights, sec_edgar, news_aggregator, forecasting
 import requests as http_requests
 import logging
 
@@ -77,11 +77,16 @@ def get_chart_data():
 @api_bp.route('/search_stocks')
 def search_stocks():
     query = request.args.get('q', '').lower()
+    market = request.args.get('market', '').upper()
     if not query:
         return jsonify([])
 
     results = []
     for stock in STOCK_DIRECTORY:
+        if market == 'US' and stock['symbol'] in INDIAN_STOCKS:
+            continue
+        if market == 'IN' and stock['symbol'] not in INDIAN_STOCKS:
+            continue
         if query in stock['symbol'].lower() or query in stock['name'].lower():
             results.append({
                 'symbol': stock['symbol'],
@@ -89,6 +94,24 @@ def search_stocks():
                 'display': f"{stock['symbol']} - {stock['name']}",
             })
     return jsonify(results[:20])
+
+
+@api_bp.route('/forecast', methods=['POST'])
+def forecast_stock():
+    data = request.get_json() or {}
+    symbol = (data.get('symbol') or '').upper()
+    if not symbol:
+        return jsonify({'error': 'Symbol is required'}), 400
+
+    try:
+        result = forecasting.generate_forecast(symbol)
+        return jsonify(result)
+    except ValueError as e:
+        logger.error("Forecast request validation failed for %s: %s", symbol, e)
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Forecast request failed for %s: %s", symbol, e)
+        return jsonify({'error': 'Forecast generation failed. Please try again.'}), 500
 
 
 @api_bp.route('/get_default_markets')
@@ -207,6 +230,7 @@ def analyze_sentiment():
 @api_bp.route('/sec_filings')
 def get_sec_filings():
     ticker = request.args.get('ticker', '').upper()
+    market = request.args.get('market', 'US').upper()
     if not ticker:
         return jsonify({'error': 'Ticker is required'}), 400
 
@@ -218,6 +242,15 @@ def get_sec_filings():
         return jsonify({'error': 'count must be a valid integer'}), 400
     count = max(1, min(count, 25))
 
+    if market == 'IN':
+        if not is_indian_stock(ticker):
+            return jsonify({
+                'error': f'{ticker} is not in the supported India stock list for filings.',
+                'filings': [],
+            }), 400
+        result = bse_filings.fetch_indian_filings(ticker, filing_types, count)
+        return jsonify(result)
+
     result = sec_edgar.fetch_filings(ticker, filing_types, count)
     return jsonify(result)
 
@@ -226,11 +259,20 @@ def get_sec_filings():
 def get_filing_summary():
     data = request.get_json()
     url = data.get('url') if data else None
+    market = data.get('market', 'US').upper() if data else 'US'
     filing_type = data.get('filing_type', '10-K') if data else '10-K'
     company_name = data.get('company_name', '') if data else ''
 
     if not url:
         return jsonify({'error': 'Filing URL is required'}), 400
+
+    if market == 'IN':
+        if not bse_filings.is_allowed_indian_filing_url(url):
+            return jsonify({
+                'error': 'Invalid filing URL. Only official BSE and NSE filing archive URLs are allowed.'
+            }), 400
+        result = bse_filings.summarize_indian_filing(url, filing_type, company_name)
+        return jsonify(result)
 
     if not sec_edgar.is_allowed_sec_url(url):
         return jsonify({'error': 'Invalid filing URL. Only SEC EDGAR filing archive URLs are allowed.'}), 400
@@ -242,12 +284,17 @@ def get_filing_summary():
 @api_bp.route('/sec_filings_overview', methods=['POST'])
 def get_filings_overview():
     data = request.get_json()
+    market = data.get('market', 'US').upper() if data else 'US'
     filings = data.get('filings', []) if data else []
     company_name = data.get('company_name', '') if data else ''
     ticker = data.get('ticker', '') if data else ''
 
     if not filings:
         return jsonify({'overview': 'No filings to analyze.'})
+
+    if market == 'IN':
+        result = bse_filings.generate_indian_filings_overview(filings, company_name, ticker)
+        return jsonify(result)
 
     result = sec_edgar.generate_filings_overview(filings, company_name, ticker)
     return jsonify(result)

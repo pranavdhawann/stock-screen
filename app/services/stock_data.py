@@ -3,8 +3,70 @@ from datetime import datetime
 from app.config import get_yahoo_symbol, YAHOO_HEADERS, YAHOO_TIMEOUT
 from app.services.cache import stock_data_cache, get_cached, set_cached
 import logging
+import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+def fetch_ohlcv_history(symbol, range_period='6mo', interval='1d'):
+    """Fetch raw OHLCV history from Yahoo Finance as a DataFrame."""
+    try:
+        yahoo_symbol = get_yahoo_symbol(symbol)
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?interval={interval}&range={range_period}"
+
+        response = requests.get(url, headers=YAHOO_HEADERS, timeout=YAHOO_TIMEOUT)
+        response.raise_for_status()
+        data = response.json()
+
+        if "chart" not in data or "result" not in data["chart"] or not data["chart"]["result"]:
+            logger.warning("No OHLCV chart data returned for %s", symbol)
+            return None
+
+        result = data["chart"]["result"][0]
+        timestamps = result.get("timestamp") or []
+        quotes = (result.get("indicators") or {}).get("quote") or []
+        if not timestamps or not quotes:
+            logger.warning("Missing OHLCV timestamp/quote data for %s", symbol)
+            return None
+
+        quote = quotes[0]
+        rows = []
+        opens = quote.get("open", [])
+        highs = quote.get("high", [])
+        lows = quote.get("low", [])
+        closes = quote.get("close", [])
+        volumes = quote.get("volume", [])
+
+        for idx, timestamp in enumerate(timestamps):
+            values = {
+                "Open": opens[idx] if idx < len(opens) else None,
+                "High": highs[idx] if idx < len(highs) else None,
+                "Low": lows[idx] if idx < len(lows) else None,
+                "Close": closes[idx] if idx < len(closes) else None,
+                "Volume": volumes[idx] if idx < len(volumes) else None,
+            }
+            if any(v is None for v in values.values()):
+                continue
+            rows.append({
+                "Date": pd.to_datetime(timestamp, unit="s", utc=True),
+                **values,
+            })
+
+        if not rows:
+            logger.warning("No complete OHLCV rows available for %s", symbol)
+            return None
+
+        frame = pd.DataFrame(rows).set_index("Date").sort_index()
+        return frame.astype({
+            "Open": float,
+            "High": float,
+            "Low": float,
+            "Close": float,
+            "Volume": float,
+        })
+    except Exception as e:
+        logger.error("Error fetching OHLCV history for %s: %s", symbol, e)
+        return None
 
 
 def fetch_stock_data(symbol, period='30d'):
