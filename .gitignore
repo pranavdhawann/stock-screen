@@ -59,7 +59,6 @@ docs/
 
 # --- Test / coverage ---
 .pytest_cache/
-.github/
 coverage/
 htmlcov/
 .coverage

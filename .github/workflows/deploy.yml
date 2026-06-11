@@ -1,0 +1,66 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: stock-sentiment-app-115
+  REGION: us-central1
+  SERVICE: stock-screen
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies (CPU torch wheel keeps CI lean)
+        run: |
+          pip install torch==2.12.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        env:
+          DISABLE_CACHE_WARMUP: '1'
+        run: python -m pytest -q
+
+  deploy:
+    # Deploy only on pushes to main, never for pull requests.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (keyless via WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/25476982226/locations/global/workloadIdentityPools/github/providers/github-provider
+          service_account: github-deployer@stock-sentiment-app-115.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source . \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --quiet
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')
+          curl --fail --silent --show-error "$URL/ping"
