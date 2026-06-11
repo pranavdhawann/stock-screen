@@ -20,7 +20,7 @@ def fetch_news(symbol, company_name):
         data = response.json()
 
         news_items = []
-        if "news" in data and data["news"]:
+        if data.get("news"):
             for news in data["news"]:
                 title = news.get("title", "")
                 summary = news.get("summary", "")
@@ -47,7 +47,10 @@ def fetch_news(symbol, company_name):
                 if len(news_items) >= 20:
                     break
 
-        set_cached(news_cache, symbol, news_items)
+        # Only cache non-empty results - caching a transient miss would hide
+        # recovered news for the full TTL.
+        if news_items:
+            set_cached(news_cache, symbol, news_items)
         return news_items
 
     except Exception as e:

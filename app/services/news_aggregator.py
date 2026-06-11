@@ -2,12 +2,15 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from defusedxml import ElementTree as ET
+from email.utils import parsedate_to_datetime
 from groq import Groq
 from app.config import (
     NEWSAPI_KEY, FINNHUB_API_KEY, ALPHAVANTAGE_API_KEY,
     GROQ_API_KEY, GROQ_MODEL,
 )
 from app.services.cache import aggregated_news_cache, get_cached, set_cached
+from app.services.groq_guard import groq_disabled, note_groq_error
 from app.services.news import fetch_news as fetch_yahoo_news
 
 logger = logging.getLogger(__name__)
@@ -15,8 +18,18 @@ logger = logging.getLogger(__name__)
 _groq_client = None
 
 
+def _safe_error_label(exc):
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if status_code:
+        return f"{type(exc).__name__} status={status_code}"
+    return type(exc).__name__
+
+
 def _get_groq_client():
     global _groq_client
+    if groq_disabled():
+        return None
     if _groq_client is None and GROQ_API_KEY:
         _groq_client = Groq(api_key=GROQ_API_KEY)
     return _groq_client
@@ -41,6 +54,7 @@ def fetch_from_newsapi(symbol, company_name):
             },
             timeout=10,
         )
+        resp.raise_for_status()
         data = resp.json()
         if data.get('status') != 'ok':
             return []
@@ -62,45 +76,80 @@ def fetch_from_newsapi(symbol, company_name):
             })
         return items
     except Exception as e:
-        logger.error("NewsAPI fetch error: %s", e)
+        logger.error("NewsAPI fetch error: %s", _safe_error_label(e))
         return []
 
 
-def fetch_from_finnhub(symbol):
-    """Fetch news from Finnhub."""
+def _finnhub_item(article):
+    return {
+        'title': article.get('headline', ''),
+        'summary': article.get('summary', '') or '',
+        'link': article.get('url', ''),
+        'publisher': article.get('source', 'Finnhub'),
+        'published': article.get('datetime', int(datetime.now().timestamp())),
+        'image': article.get('image', ''),
+    }
+
+
+def _fetch_finnhub_items(symbol, *, days=3, max_items=10):
     if not FINNHUB_API_KEY:
         return []
 
     try:
         today = datetime.now().strftime('%Y-%m-%d')
-        three_days_ago = (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
         resp = requests.get(
             'https://finnhub.io/api/v1/company-news',
             params={
                 'symbol': symbol,
-                'from': three_days_ago,
+                'from': start_date,
                 'to': today,
                 'token': FINNHUB_API_KEY,
             },
             timeout=10,
         )
+        resp.raise_for_status()
         data = resp.json()
         if not isinstance(data, list):
             return []
 
-        items = []
-        for article in data[:10]:
-            items.append({
-                'title': article.get('headline', ''),
-                'summary': article.get('summary', '') or '',
-                'link': article.get('url', ''),
-                'publisher': article.get('source', 'Finnhub'),
-                'published': article.get('datetime', int(datetime.now().timestamp())),
-            })
-        return items
+        return [_finnhub_item(article) for article in data[:max_items]]
     except Exception as e:
-        logger.error("Finnhub fetch error: %s", e)
+        logger.error("Finnhub fetch error: %s", _safe_error_label(e))
         return []
+
+
+def fetch_finnhub_company_news(symbol, *, use_cache=True):
+    """Fetch stock-specific Finnhub news with the shared Supabase cache path."""
+    normalized = str(symbol or "").upper().strip()
+    if not FINNHUB_API_KEY:
+        return {'error': 'Finnhub API key not configured', 'news': []}
+
+    sbc = None
+    if use_cache:
+        try:
+            from app.services import supabase_client as sbc
+        except ImportError:
+            sbc = None
+
+    if sbc and sbc.is_available():
+        cached = sbc.get_finnhub_cache(normalized)
+        if cached:
+            return {
+                'news': cached['news_items'],
+                'cached': True,
+                'fetched_at': cached['fetched_at'],
+            }
+
+    items = _fetch_finnhub_items(normalized, days=7, max_items=15)
+    if items and sbc and sbc.is_available():
+        sbc.set_finnhub_cache(normalized, items)
+    return {'news': items, 'cached': False}
+
+
+def fetch_from_finnhub(symbol):
+    """Fetch news from Finnhub for aggregate multi-source news."""
+    return _fetch_finnhub_items(symbol, days=3, max_items=10)
 
 
 def fetch_from_alphavantage(symbol):
@@ -119,6 +168,7 @@ def fetch_from_alphavantage(symbol):
             },
             timeout=10,
         )
+        resp.raise_for_status()
         data = resp.json()
         feed = data.get('feed', [])
 
@@ -139,23 +189,19 @@ def fetch_from_alphavantage(symbol):
             })
         return items
     except Exception as e:
-        logger.error("Alpha Vantage fetch error: %s", e)
+        logger.error("Alpha Vantage fetch error: %s", _safe_error_label(e))
         return []
 
 
 def fetch_from_google_rss(symbol, company_name):
     """Fetch news from Google News RSS (no API key required)."""
     try:
-        import xml.etree.ElementTree as ET
-        from email.utils import parsedate_to_datetime
-
         query = f"{symbol}+{company_name.split()[0]}+stock"
         url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
         resp = requests.get(url, timeout=10, headers={
             'User-Agent': 'Mozilla/5.0 (compatible; StockScreen/1.0)'
         })
-        if resp.status_code != 200:
-            return []
+        resp.raise_for_status()
 
         root = ET.fromstring(resp.text)
         items = []
@@ -179,22 +225,18 @@ def fetch_from_google_rss(symbol, company_name):
             })
         return items
     except Exception as e:
-        logger.error("Google RSS fetch error: %s", e)
+        logger.warning("Google RSS fetch failed: %s", _safe_error_label(e))
         return []
 
 
 def fetch_from_marketwatch_rss(symbol):
     """Fetch news from MarketWatch RSS (no API key required)."""
     try:
-        import xml.etree.ElementTree as ET
-        from email.utils import parsedate_to_datetime
-
-        url = f"https://feeds.marketwatch.com/marketwatch/marketpulse/"
+        url = "https://feeds.marketwatch.com/marketwatch/marketpulse/"
         resp = requests.get(url, timeout=10, headers={
             'User-Agent': 'Mozilla/5.0 (compatible; StockScreen/1.0)'
         })
-        if resp.status_code != 200:
-            return []
+        resp.raise_for_status()
 
         root = ET.fromstring(resp.text)
         items = []
@@ -223,7 +265,7 @@ def fetch_from_marketwatch_rss(symbol):
             })
         return items[:5]
     except Exception as e:
-        logger.error("MarketWatch RSS fetch error: %s", e)
+        logger.warning("MarketWatch RSS fetch failed: %s", _safe_error_label(e))
         return []
 
 
@@ -269,14 +311,17 @@ def aggregate_news(symbol, company_name):
                 logger.info("Fetched %d items from %s for %s", len(result), source_name, symbol)
                 all_items.extend(result)
             except Exception as e:
-                logger.error("Error fetching from %s: %s", source_name, e)
+                logger.warning("Optional news source %s failed: %s", source_name, _safe_error_label(e))
 
     # Dedup and sort by recency
     unique = _dedup_news(all_items)
     unique.sort(key=lambda x: x.get('published', 0), reverse=True)
     result = unique[:25]
 
-    set_cached(aggregated_news_cache, cache_key, result)
+    # Only cache non-empty results so a transient all-sources failure
+    # doesn't blank the news for the full TTL.
+    if result:
+        set_cached(aggregated_news_cache, cache_key, result)
     return result
 
 
@@ -339,6 +384,7 @@ Headlines:
 
     except Exception as e:
         logger.error("Groq preprocessing error: %s", e)
+        note_groq_error(e)
         return news_items
 
 

@@ -12,9 +12,12 @@ from .features import TARGET_COL
 
 @dataclass
 class Splits:
-    X_train: np.ndarray; y_train: np.ndarray
-    X_val: np.ndarray;   y_val: np.ndarray
-    X_test: np.ndarray;  y_test: np.ndarray
+    X_train: np.ndarray
+    y_train: np.ndarray
+    X_val: np.ndarray
+    y_val: np.ndarray
+    X_test: np.ndarray
+    y_test: np.ndarray
     feat_scaler: StandardScaler
     target_scaler: StandardScaler
     feature_names: list[str]
@@ -45,8 +48,8 @@ def prepare_splits(
     i_val = int(n * (train_frac + val_frac))
 
     train_df = feat_df.iloc[:i_train]
-    val_df   = feat_df.iloc[i_train:i_val]
-    test_df  = feat_df.iloc[i_val:]
+    val_df = feat_df.iloc[i_train:i_val]
+    test_df = feat_df.iloc[i_val:]
 
     feat_scaler = StandardScaler().fit(train_df.values)
     target_scaler = StandardScaler().fit(train_df[[TARGET_COL]].values)

@@ -63,30 +63,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const NEWS_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
     const PROGRESS_FETCH_THRESHOLD = 30;
     const PROGRESS_ANALYZE_THRESHOLD = 60;
+    const DEBUG_LOGS = new URLSearchParams(window.location.search).has('debug');
+    let autocompleteController = null;
 
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function sanitizeSymbol(value) {
-        return String(value ?? '').replace(/[^A-Za-z0-9.^-]/g, '');
-    }
-
-    function sanitizeUrl(value) {
-        try {
-            const parsed = new URL(String(value ?? ''), window.location.origin);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.href;
-            }
-        } catch (error) {
-            return '';
+    function debugLog(...args) {
+        if (DEBUG_LOGS) {
+            console.log(...args);
         }
-        return '';
+    }
+
+    const utils = window.StockScreenUtils || {};
+    const escapeHtml = utils.escapeHtml || (value => String(value ?? ''));
+    const sanitizeSymbol = utils.sanitizeSymbol || (value => String(value ?? '').replace(/[^A-Za-z0-9.^-]/g, ''));
+    const sanitizeUrl = utils.sanitizeUrl || (() => '');
+    const fetchJson = utils.fetchJson;
+    const showError = message => utils.showError(errorMessage, message, {
+        hiddenClass: 'd-none',
+        textTarget: document.getElementById('errorText'),
+    });
+
+    function getSentimentClass(sentiment) {
+        const normalized = String(sentiment || '').toLowerCase();
+        if (['very positive', 'positive', 'bullish'].includes(normalized)) return 'positive';
+        if (['very negative', 'negative', 'bearish'].includes(normalized)) return 'negative';
+        if (normalized === 'neutral') return 'neutral';
+        return 'unknown';
     }
 
     function positionFloatingDropdown(dropdown) {
@@ -191,8 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load stock dropdown from API
     function loadStockDropdown() {
-        fetch('/api/stock_list')
-            .then(response => response.json())
+        fetchJson('/api/stock_list')
             .then(data => {
                 const usSection = document.getElementById('usStocksSection');
                 const inSection = document.getElementById('indianStocksSection');
@@ -289,12 +289,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         searchTimeout = setTimeout(() => {
-            fetch(`/api/search_stocks?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
+            if (autocompleteController) {
+                autocompleteController.abort();
+            }
+            autocompleteController = new AbortController();
+            fetchJson(`/api/search_stocks?q=${encodeURIComponent(query)}`, { signal: autocompleteController.signal })
                 .then(data => {
                     displayAutocomplete(data);
                 })
                 .catch(error => {
+                    if (error.name === 'AbortError') return;
                     console.error('Error fetching autocomplete:', error);
                 });
         }, AUTOCOMPLETE_DEBOUNCE_MS); // Faster response time
@@ -330,12 +334,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderNewsToContainer(newsItems, container) {
         if (!container) return;
 
+        const allItems = Array.isArray(newsItems) ? newsItems : [];
         const cutoff = Date.now() - NEWS_LOOKBACK_MS;
-        const recentNewsItems = (Array.isArray(newsItems) ? newsItems : []).filter(item => {
+        let recentNewsItems = allItems.filter(item => {
             const published = Number(item?.published || 0);
             const publishedMs = published < 1e12 ? published * 1000 : published;
             return publishedMs >= cutoff;
         });
+
+        // If the 3-day window filters everything out, show the most recent
+        // items anyway - an empty panel reads as "news is broken".
+        if (recentNewsItems.length === 0 && allItems.length > 0) {
+            recentNewsItems = allItems
+                .slice()
+                .sort((a, b) => Number(b?.published || 0) - Number(a?.published || 0))
+                .slice(0, 10);
+        }
 
         if (recentNewsItems.length === 0) {
             container.innerHTML = '<div class="col-12"><p class="text-muted text-center">No news items found for this symbol.</p></div>';
@@ -363,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const safeAriaTitle = escapeHtml(`Read full article: ${titleRaw.slice(0, 50)}...`);
 
             return `
-                <div class="news-item ${(item?.sentiment || '').toLowerCase()}">
+                <div class="news-item ${getSentimentClass(item?.sentiment)}">
                     <div class="d-flex align-items-start gap-2">
                         <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #00D4FF; white-space: nowrap; min-width: 90px; padding-top: 2px;">${escapeHtml(timeLabel)}</span>
                         <div class="flex-grow-1">
@@ -496,16 +510,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         headlinesContainer.innerHTML = '<div class="text-center py-3"><span class="terminal-cursor">LOADING HEADLINES</span></div>';
 
-        fetch('/api/currents_news')
-            .then(r => r.json())
+        fetchJson('/api/currents_news')
             .then(data => {
                 if (data.news && data.news.length > 0) {
                     const src = data.cached ? 'Supabase cache' : 'Currents API';
-                    console.log(`[Headlines] Loaded ${data.news.length} items from ${src}`);
+                    debugLog(`[Headlines] Loaded ${data.news.length} items from ${src}`);
                     renderCurrentsNews(data.news, headlinesContainer);
                     updateHeadlinesTimestamp(data.fetched_at || null);
                 } else {
-                    console.log('[Headlines] No Currents results, falling back to SPY news');
+                    debugLog('[Headlines] No Currents results, falling back to SPY news');
                     loadFallbackHeadlines(headlinesContainer);
                 }
             })
@@ -516,8 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadFallbackHeadlines(container) {
-        fetch('/api/news?symbol=SPY')
-            .then(r => r.json())
+        fetchJson('/api/news?symbol=SPY')
             .then(data => {
                 if (data.news_items && data.news_items.length > 0) {
                     renderNewsToContainer(data.news_items, container);
@@ -584,25 +596,32 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.classList.add('active');
 
             // Fetch new chart data
-            fetch(`/api/chart_data?symbol=${encodeURIComponent(currentSymbol)}&period=${period}`)
-                .then(r => r.json())
+            fetchJson(`/api/chart_data?symbol=${encodeURIComponent(currentSymbol)}&period=${period}`)
                 .then(data => {
-                    if (data.error) return;
+                    currentAnalysisData = {
+                        ...(currentAnalysisData || {}),
+                        ...data,
+                        sentiment_timeline: currentAnalysisData?.sentiment_timeline || [],
+                        sentiment_data: currentAnalysisData?.sentiment_data || [],
+                        sentiment_divergence: currentAnalysisData?.sentiment_divergence || 0,
+                    };
                     // Rebuild chart with new data
-                    createPriceSentimentChart({
-                        chart_data: data.chart_data,
-                        sentiment_data: [],
-                        currency: data.currency || currentCurrency,
-                        current_price: data.current_price,
-                        price_change: data.price_change,
-                        price_change_percent: data.price_change_percent,
-                    });
+                    createPriceSentimentChart(currentAnalysisData);
+                    renderTraderMetrics(currentAnalysisData);
                     // Update price display
                     updateStockPrice(data);
                 })
                 .catch(err => console.error('Chart range fetch error:', err));
         });
     }
+
+    document.querySelectorAll('.indicator-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            if (currentAnalysisData) {
+                createPriceSentimentChart(currentAnalysisData);
+            }
+        });
+    });
 
     // Load default market data
     function loadDefaultMarkets(location = 'US') {
@@ -618,13 +637,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        fetch(`/api/get_default_markets?location=${location}`)
-            .then(response => response.json())
+        fetchJson(`/api/get_default_markets?location=${location}`)
             .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
                 displayDefaultMarkets(data.markets);
             })
             .catch(error => {
@@ -651,7 +665,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentPrice = Number(market.current_price || 0);
             const priceChange = Number(market.price_change || 0);
             const priceChangePercent = Number(market.price_change_percent || 0);
-             
+
+            // Dense terminal stats from the chart data already in hand.
+            const chartData = Array.isArray(market.chart_data) ? market.chart_data : [];
+            const last = chartData[chartData.length - 1] || {};
+            const highs = chartData.map(p => Number(p.high)).filter(Number.isFinite);
+            const lows = chartData.map(p => Number(p.low)).filter(Number.isFinite);
+            const fmt = value => Number.isFinite(Number(value)) && value !== null
+                ? Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 })
+                : '—';
+            const statsHtml = chartData.length ? `
+                <div class="market-stats-row">
+                    <span class="market-stat"><span class="market-stat-label">OPEN</span>${safeCurrency}${fmt(last.open)}</span>
+                    <span class="market-stat"><span class="market-stat-label">HI</span>${safeCurrency}${fmt(last.high)}</span>
+                    <span class="market-stat"><span class="market-stat-label">LO</span>${safeCurrency}${fmt(last.low)}</span>
+                    <span class="market-stat"><span class="market-stat-label">30D RNG</span>${safeCurrency}${fmt(lows.length ? Math.min(...lows) : null)}–${safeCurrency}${fmt(highs.length ? Math.max(...highs) : null)}</span>
+                    <span class="market-stat"><span class="market-stat-label">VOL</span>${compactNumber(last.volume || 0)}</span>
+                </div>` : '';
+
             return `
                 <div class="market-card">
                     <div class="card-body">
@@ -659,11 +690,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="market-price">
                             <div class="price-value">${safeCurrency}${currentPrice.toLocaleString()}</div>
                             <div class="price-change ${changeClass}">
-                                
+
                                 ${safeCurrency}${Math.abs(priceChange).toFixed(2)} (${Math.abs(priceChangePercent).toFixed(2)}%)
                             </div>
                         </div>
-                        <div class="market-chart">
+                        ${statsHtml}
+                        <div class="market-chart" data-display-name="${escapeHtml(market.display_name)}">
                             <canvas id="chart-${safeSymbol.replace(/[^a-zA-Z0-9]/g, '')}" width="500" height="350"></canvas>
                         </div>
                     </div>
@@ -814,9 +846,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const canvas = this.querySelector('canvas');
                 if (!canvas) return;
                 
-                // Get the market data from the canvas ID
-                const marketSymbol = canvas.id.replace('chart-', '');
-                const marketName = marketSymbol.replace(/([A-Z])/g, ' $1').trim();
+                // Prefer the stored display name; fall back to the canvas ID.
+                const marketName = this.dataset.displayName
+                    || canvas.id.replace('chart-', '');
                 
                 // Create modal for expanded chart
                 const modal = document.createElement('div');
@@ -968,11 +1000,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ─── Finnhub — Stock-specific news (cached server-side in Supabase) ───
 
     function fetchFinnhubNews(symbol) {
-        return fetch(`/api/finnhub_news?symbol=${encodeURIComponent(symbol)}`)
-            .then(r => r.json())
+        return fetchJson(`/api/finnhub_news?symbol=${encodeURIComponent(symbol)}`)
             .then(data => {
                 const src = data.cached ? 'Supabase cache' : 'Finnhub API';
-                console.log(`[Finnhub] ${symbol}: ${(data.news || []).length} items from ${src}`);
+                debugLog(`[Finnhub] ${symbol}: ${(data.news || []).length} items from ${src}`);
                 return data.news || [];
             })
             .catch(err => {
@@ -1023,13 +1054,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 200);
 
-        // Parallel fetch: Finnhub news (localStorage-cached) + yfinance sentiment analysis
+        // Parallel fetch: server-cached Finnhub news + yfinance sentiment analysis
         const finnhubPromise = fetchFinnhubNews(cleanSymbol);
-        const sentimentPromise = fetch('/api/analyze_sentiment', {
+        const sentimentPromise = fetchJson('/api/analyze_sentiment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbol: cleanSymbol }),
-        }).then(r => r.json());
+        });
 
         Promise.all([sentimentPromise, finnhubPromise])
         .then(([data, finnhubNews]) => {
@@ -1048,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }));
                 data.news_items = [...data.news_items, ...newItems]
                     .sort((a, b) => (b.published || 0) - (a.published || 0));
-                console.log(`[Finnhub] Merged ${newItems.length} additional news items`);
+                debugLog(`[Finnhub] Merged ${newItems.length} additional news items`);
             }
 
             // Update stock price display
@@ -1094,16 +1125,250 @@ document.addEventListener('DOMContentLoaded', function() {
     // Store the current symbol for chart range switching
     let currentSymbol = '';
     let currentCurrency = '$';
+    let currentAnalysisData = null;
+    let currentIndicatorsData = null;
+    let volumeLiquidityChart = null;
+    let sentimentTimelineChart = null;
+    let indicatorMomentumChart = null;
+
+    function compactNumber(value) {
+        const number = Number(value || 0);
+        return Intl.NumberFormat('en-US', {
+            notation: 'compact',
+            maximumFractionDigits: 1,
+        }).format(number);
+    }
+
+    function activeIndicator(name) {
+        const toggle = document.querySelector(`.indicator-toggle[value="${name}"]`);
+        return !toggle || toggle.checked;
+    }
+
+    function renderVolumeLiquidity(data) {
+        const canvas = document.getElementById('volumeLiquidityChart');
+        const summary = document.getElementById('volumeSummary');
+        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(data?.chart_data)) return;
+
+        if (volumeLiquidityChart) {
+            volumeLiquidityChart.destroy();
+        }
+
+        const bars = data.chart_data.map((item, index) => {
+            const close = Number(item.price || item.close || 0);
+            const open = Number(item.open || close);
+            return {
+                x: new Date(item.date),
+                y: Number(data.volume?.[index] ?? item.volume ?? 0),
+                backgroundColor: close >= open ? 'rgba(0, 255, 136, 0.45)' : 'rgba(255, 59, 59, 0.45)',
+            };
+        });
+        const relativeVolume = data.chart_data.map((item, index) => ({
+            x: new Date(item.date),
+            y: Number(data.relative_volume?.[index] || 0),
+        }));
+
+        volumeLiquidityChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                datasets: [
+                    {
+                        label: 'Volume',
+                        data: bars,
+                        backgroundColor: bars.map(item => item.backgroundColor),
+                        borderWidth: 0,
+                        yAxisID: 'y',
+                    },
+                    {
+                        type: 'line',
+                        label: 'Relative volume',
+                        data: relativeVolume,
+                        borderColor: '#00D4FF',
+                        backgroundColor: 'rgba(0, 212, 255, 0.12)',
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                        tension: 0.2,
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, ticks: { color: '#666', maxTicksLimit: 4 }, grid: { display: false } },
+                    y: { ticks: { color: '#666', callback: compactNumber }, grid: { color: 'rgba(42,45,53,0.45)' } },
+                    y1: { position: 'right', ticks: { color: '#00D4FF' }, grid: { drawOnChartArea: false } },
+                },
+            },
+        });
+
+        if (summary) {
+            const lastIndex = Math.max((data.chart_data || []).length - 1, 0);
+            const rel = Number(data.relative_volume?.[lastIndex] || 0).toFixed(2);
+            const dollars = compactNumber(data.dollar_volume?.[lastIndex] || 0);
+            const spike = data.volume_spike?.[lastIndex] ? 'spike' : 'normal';
+            summary.textContent = `Last volume ${compactNumber(data.volume?.[lastIndex] || 0)} | ${rel}x average | ${data.currency || '$'}${dollars} traded | ${spike}`;
+        }
+    }
+
+    function renderSentimentTimeline(data) {
+        const canvas = document.getElementById('sentimentTimelineChart');
+        const summary = document.getElementById('sentimentDivergence');
+        const timeline = data?.sentiment_timeline || [];
+        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(timeline)) return;
+
+        if (sentimentTimelineChart) {
+            sentimentTimelineChart.destroy();
+        }
+
+        const scoreData = timeline.map(item => ({ x: new Date(item.date), y: Number(item.score || 0) }));
+        const countData = timeline.map(item => ({ x: new Date(item.date), y: Number(item.headline_count || 0) }));
+
+        sentimentTimelineChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Sentiment score',
+                        data: scoreData,
+                        borderColor: '#FFA500',
+                        backgroundColor: 'rgba(255, 165, 0, 0.12)',
+                        borderWidth: 1.5,
+                        pointRadius: 2,
+                        tension: 0.25,
+                        fill: true,
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Headlines',
+                        data: countData,
+                        backgroundColor: 'rgba(0, 212, 255, 0.28)',
+                        borderWidth: 0,
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, ticks: { color: '#666', maxTicksLimit: 4 }, grid: { display: false } },
+                    y: { min: -1, max: 1, ticks: { color: '#666' }, grid: { color: 'rgba(42,45,53,0.45)' } },
+                    y1: { position: 'right', min: 0, ticks: { color: '#00D4FF', precision: 0 }, grid: { drawOnChartArea: false } },
+                },
+            },
+        });
+
+        if (summary) {
+            const divergence = Number(data.sentiment_divergence || 0);
+            const label = divergence > 0.25 ? 'price/sentiment divergence' : divergence < -0.25 ? 'price confirms sentiment' : 'mixed confirmation';
+            summary.textContent = `Divergence ${divergence.toFixed(2)} | ${label}`;
+        }
+    }
+
+    function renderIndicatorPanel(indicatorPayload) {
+        const panel = document.getElementById('traderMetricsPanel');
+        const togglePanel = document.getElementById('technicalTogglePanel');
+        const summary = document.getElementById('indicatorSummary');
+        const canvas = document.getElementById('indicatorMomentumChart');
+        const rows = indicatorPayload?.indicators || [];
+        if (panel) panel.style.display = '';
+        if (togglePanel) togglePanel.style.display = '';
+        if (!rows.length || !canvas || typeof Chart === 'undefined') {
+            if (summary) summary.textContent = 'Indicators unavailable for the current series.';
+            return;
+        }
+
+        if (indicatorMomentumChart) {
+            indicatorMomentumChart.destroy();
+        }
+
+        const latest = indicatorPayload.latest || rows[rows.length - 1] || {};
+        if (summary) {
+            summary.innerHTML = [
+                `RSI 14: <span style="color: var(--text-primary);">${Number(latest.rsi_14 || 0).toFixed(1)}</span>`,
+                `MACD: <span style="color: var(--text-primary);">${Number(latest.macd || 0).toFixed(2)}</span>`,
+                `ATR 14: <span style="color: var(--text-primary);">${Number(latest.atr_14 || 0).toFixed(2)}</span>`,
+                `Volume ratio: <span style="color: var(--text-primary);">${Number(latest.volume_ratio || 0).toFixed(2)}x</span>`,
+            ].join('<br>');
+        }
+
+        indicatorMomentumChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'RSI 14',
+                        data: rows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.rsi_14 || 0) })),
+                        borderColor: '#00D4FF',
+                        backgroundColor: 'rgba(0, 212, 255, 0.08)',
+                        yAxisID: 'y',
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    },
+                    {
+                        type: 'bar',
+                        label: 'MACD histogram',
+                        data: rows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.macd_histogram || 0) })),
+                        backgroundColor: rows.map(item => Number(item.macd_histogram || 0) >= 0 ? 'rgba(0,255,136,0.35)' : 'rgba(255,59,59,0.35)'),
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, ticks: { color: '#666', maxTicksLimit: 4 }, grid: { display: false } },
+                    y: { min: 0, max: 100, ticks: { color: '#00D4FF' }, grid: { color: 'rgba(42,45,53,0.45)' } },
+                    y1: { position: 'right', ticks: { color: '#FFA500' }, grid: { drawOnChartArea: false } },
+                },
+            },
+        });
+    }
+
+    function renderTraderMetrics(data, indicatorPayload = currentIndicatorsData) {
+        const panel = document.getElementById('traderMetricsPanel');
+        const togglePanel = document.getElementById('technicalTogglePanel');
+        if (panel) panel.style.display = '';
+        if (togglePanel) togglePanel.style.display = '';
+        renderVolumeLiquidity(data);
+        renderSentimentTimeline(data);
+        renderIndicatorPanel(indicatorPayload);
+    }
+
+    function fetchIndicators(symbol) {
+        return fetchJson(`/api/indicators/${encodeURIComponent(symbol)}`)
+            .then(payload => {
+                currentIndicatorsData = payload;
+                renderTraderMetrics(currentAnalysisData || {}, payload);
+                createPriceSentimentChart(currentAnalysisData || {});
+                return payload;
+            })
+            .catch(error => {
+                console.error('Indicator fetch error:', error);
+                currentIndicatorsData = { indicators: [], latest: {} };
+                renderIndicatorPanel(currentIndicatorsData);
+                return currentIndicatorsData;
+            });
+    }
 
     function displayResults(data) {
         // Track current symbol for range toggle
         currentSymbol = data.symbol || '';
         currentCurrency = data.currency || '$';
+        currentAnalysisData = data;
+        currentIndicatorsData = null;
 
         if (stockPageTitle) {
-            const titleSymbol = escapeHtml(data.symbol || '');
-            const titleCompany = escapeHtml(data.company_name || '');
-            stockPageTitle.innerHTML = `${titleCompany ? `${titleCompany} (${titleSymbol})` : `${titleSymbol} ANALYSIS`}`;
+            const titleSymbol = String(data.symbol || '');
+            const titleCompany = String(data.company_name || '');
+            stockPageTitle.textContent = titleCompany ? `${titleCompany} (${titleSymbol})` : `${titleSymbol} ANALYSIS`;
         }
 
         // Reset chart range toggle to 30D
@@ -1130,10 +1395,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
          // Create price-sentiment chart
          createPriceSentimentChart(data);
+         renderTraderMetrics(data, { indicators: [], latest: {} });
+         if (currentSymbol) {
+             fetchIndicators(currentSymbol);
+         }
          
          // Display insights
          if (data.insights) {
              window._lastInsights = data.insights;
+             window._lastKeywords = data.keywords || [];
              displayInsights(data.insights);
          }
 
@@ -1194,26 +1464,14 @@ document.addEventListener('DOMContentLoaded', function() {
          const signalBadge = v.signal === 'Bullish' ? 'bg-success' : v.signal === 'Bearish' ? 'bg-danger' : 'bg-warning text-dark';
          const confBadge = v.confidence_label === 'High' ? 'bg-success' : v.confidence_label === 'Medium' ? 'bg-warning text-dark' : 'bg-danger';
 
-         // Direction helpers
-         function dirIcon(d) {
-             if (d === 'up') return '';
-             if (d === 'down') return '';
-             return '';
-         }
          function sevBadge(s) {
              const cls = s === 'High' ? 'bg-danger' : s === 'Medium' ? 'bg-warning text-dark' : 'bg-secondary';
              return `<span class="badge ${cls} severity-badge">${escapeHtml(s)}</span>`;
-         }
-         function trendIcon(t) {
-             if (t === 'improving') return '';
-             if (t === 'declining') return '';
-             return '';
          }
 
          // Build catalysts
          const catalystsHtml = (ins.catalysts || []).map(c => `
              <div class="catalyst-item mb-2">
-                  ${dirIcon(c.direction)}
                  <span class="badge bg-secondary me-2">${escapeHtml(c.tag || '')}</span>
                  <span>${escapeHtml(c.text || '')}</span>
              </div>
@@ -1236,6 +1494,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
          // Velocity
          const vel = ins.sentiment_velocity || {};
+         const trend = ins.trending || {};
+         const keywords = (ins.keywords_enriched || window._lastKeywords || []).slice(0, 12);
+         const keywordHtml = keywords.map(kw => {
+             const sentimentName = String(kw.sentiment || 'neutral').toLowerCase();
+             const color = sentimentName === 'positive'
+                 ? 'var(--positive)'
+                 : sentimentName === 'negative'
+                     ? 'var(--negative)'
+                     : 'var(--text-muted)';
+             return `<span class="badge bg-secondary me-1 mb-1" style="color:${color};">${escapeHtml(kw.text || kw.word || '')}</span>`;
+         }).join('') || '<span class="text-muted">No keyword cluster available.</span>';
 
          // Report copy
          const report = ins.report_summary || {};
@@ -1255,6 +1524,28 @@ document.addEventListener('DOMContentLoaded', function() {
                  <p class="mb-1 fw-bold" style="font-size: 1.1em;">${escapeHtml(v.one_liner || '')}</p>
                  ${v.confidence_explanation ? `<p class="text-muted mb-2" style="font-size: 0.85em;">${escapeHtml(v.confidence_explanation)}</p>` : ''}
                  ${ins.analyst_note ? `<p class="mb-0" style="font-size: 0.9em;">${escapeHtml(ins.analyst_note)}</p>` : ''}
+             </div>
+
+             <!-- Velocity + Topics -->
+             <div class="row mb-3">
+                 <div class="col-md-4 mb-3 mb-md-0">
+                     <h6 class="mb-2">SENTIMENT VELOCITY</h6>
+                     <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary);">
+                         <span style="color: var(--accent-amber);">${escapeHtml(vel.trend || 'stable')}</span>
+                         ${vel.label ? ` - ${escapeHtml(vel.label)}` : ''}
+                     </div>
+                 </div>
+                 <div class="col-md-4 mb-3 mb-md-0">
+                     <h6 class="mb-2">TRENDING WATCH</h6>
+                     <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary);">
+                         <span style="color: var(--accent-cyan);">${escapeHtml(trend.category || 'other')}</span>
+                         ${trend.what_to_watch ? ` - ${escapeHtml(trend.what_to_watch)}` : ''}
+                     </div>
+                 </div>
+                 <div class="col-md-4">
+                     <h6 class="mb-2">KEYWORDS</h6>
+                     <div>${keywordHtml}</div>
+                 </div>
              </div>
 
              <!-- Catalysts + Risks -->
@@ -1324,11 +1615,6 @@ document.addEventListener('DOMContentLoaded', function() {
          });
      }
     
-    function showError(message) {
-        document.getElementById('errorText').textContent = message;
-        errorMessage.classList.remove('d-none');
-    }
-    
      function getSentimentBadgeColor(sentiment) {
          const normalized = String(sentiment || '').toLowerCase();
          switch(normalized) {
@@ -1381,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create price-sentiment overlay chart
     function createPriceSentimentChart(data) {
         const canvas = document.getElementById('priceSentimentChart');
-        if (!canvas || !data.chart_data || !data.sentiment_data) return;
+        if (!canvas || !Array.isArray(data.chart_data)) return;
         
         // Destroy existing chart if it exists
         if (window.priceSentimentChartInstance) {
@@ -1393,9 +1679,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const chartData = data.chart_data.map(item => ({
             x: new Date(item.date),
-            y: item.price
+            y: Number(item.price || item.close || 0)
         }));
         const chartCurrency = data.currency || '$';
+        const datasets = [];
         
         // Determine chart color based ONLY on stock movement (latest vs previous close)
         let chartColor = '#FFA500'; // Default amber
@@ -1414,26 +1701,89 @@ document.addEventListener('DOMContentLoaded', function() {
                 backgroundColor = 'rgba(255, 59, 59, 0.05)';
             }
         }
+
+        datasets.push({
+            label: `Price (${chartCurrency})`,
+            data: chartData,
+            borderColor: chartColor,
+            backgroundColor: backgroundColor,
+            borderWidth: 1.5,
+            tension: 0.1,
+            fill: true,
+            pointRadius: 2,
+            pointBackgroundColor: chartColor,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: chartColor,
+            pointHoverBorderColor: '#0a0a0a',
+            pointHoverBorderWidth: 2,
+            yAxisID: 'y',
+        });
+
+        const indicatorRows = currentIndicatorsData?.indicators || [];
+        if (indicatorRows.length) {
+            if (activeIndicator('sma_20')) {
+                datasets.push({
+                    label: 'SMA 20',
+                    data: indicatorRows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.sma_20 || 0) })),
+                    borderColor: '#00D4FF',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    tension: 0.1,
+                    yAxisID: 'y',
+                });
+            }
+            if (activeIndicator('ema_20')) {
+                datasets.push({
+                    label: 'EMA 20',
+                    data: indicatorRows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.ema_20 || 0) })),
+                    borderColor: '#D6D6D6',
+                    borderDash: [4, 3],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    tension: 0.1,
+                    yAxisID: 'y',
+                });
+            }
+            if (activeIndicator('bb')) {
+                datasets.push({
+                    label: 'Bollinger upper',
+                    data: indicatorRows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.bb_upper_20 || 0) })),
+                    borderColor: 'rgba(255, 165, 0, 0.45)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: false,
+                    yAxisID: 'y',
+                });
+                datasets.push({
+                    label: 'Bollinger lower',
+                    data: indicatorRows.map(item => ({ x: new Date(item.timestamp || item.date), y: Number(item.bb_lower_20 || 0) })),
+                    borderColor: 'rgba(255, 165, 0, 0.45)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: false,
+                    yAxisID: 'y',
+                });
+            }
+        }
+
+        if (activeIndicator('sentiment') && Array.isArray(data.sentiment_timeline) && data.sentiment_timeline.length) {
+            datasets.push({
+                type: 'bar',
+                label: 'Sentiment score',
+                data: data.sentiment_timeline.map(item => ({ x: new Date(item.date), y: Number(item.score || 0) })),
+                backgroundColor: data.sentiment_timeline.map(item => Number(item.score || 0) >= 0
+                    ? 'rgba(0, 255, 136, 0.22)'
+                    : 'rgba(255, 59, 59, 0.22)'),
+                borderWidth: 0,
+                yAxisID: 'sentiment',
+            });
+        }
         
         try {
             window.priceSentimentChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'Stock Price ($)',
-                    data: chartData,
-                    borderColor: chartColor,
-                    backgroundColor: backgroundColor,
-                    borderWidth: 1.5,
-                    tension: 0.1,
-                    fill: true,
-                    pointRadius: 3,
-                    pointBackgroundColor: chartColor,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: chartColor,
-                    pointHoverBorderColor: '#0a0a0a',
-                    pointHoverBorderWidth: 2
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -1470,10 +1820,28 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         grid: { color: 'rgba(42, 45, 53, 0.5)' }
+                    },
+                    sentiment: {
+                        type: 'linear',
+                        display: activeIndicator('sentiment'),
+                        min: -1,
+                        max: 1,
+                        position: 'left',
+                        ticks: {
+                            color: '#999',
+                            font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        },
+                        grid: { drawOnChartArea: false }
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: datasets.length > 1,
+                        labels: {
+                            color: '#999',
+                            font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        },
+                    },
                     tooltip: {
                         mode: 'index',
                         intersect: false,
@@ -1601,5 +1969,170 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
+    // ─── Terminal extras: world clocks, ticker tape, market movers ───
+
+    const TAPE_SYMBOLS = ['^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META', 'JPM', 'NFLX', 'V'];
+    const QUOTES_REFRESH_MS = 60 * 1000;
+
+    function initTerminalClocks() {
+        const zones = [
+            { id: 'clockNY', tz: 'America/New_York' },
+            { id: 'clockLDN', tz: 'Europe/London' },
+            { id: 'clockMUM', tz: 'Asia/Kolkata' },
+        ];
+        const formatters = zones.map(zone => ({
+            el: document.getElementById(zone.id),
+            fmt: new Intl.DateTimeFormat('en-GB', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false, timeZone: zone.tz,
+            }),
+        })).filter(zone => zone.el);
+
+        if (formatters.length === 0) return;
+
+        function tick() {
+            const now = new Date();
+            formatters.forEach(zone => { zone.el.textContent = zone.fmt.format(now); });
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    function tapeEntryHtml(quote) {
+        const pct = Number(quote.change_percent || 0);
+        const dirClass = pct >= 0 ? 'tape-up' : 'tape-down';
+        const arrow = pct >= 0 ? '▲' : '▼';
+        const price = Number(quote.price || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+        return `
+            <span class="ticker-item ${dirClass}" data-symbol="${sanitizeSymbol(quote.symbol)}">
+                <span class="ticker-symbol">${escapeHtml(quote.symbol)}</span>
+                <span class="ticker-price">${escapeHtml(quote.currency || '$')}${price}</span>
+                <span class="ticker-change">${arrow} ${Math.abs(pct).toFixed(2)}%</span>
+            </span>`;
+    }
+
+    function renderTickerTape(quotes) {
+        const track = document.getElementById('tickerTrack');
+        if (!track || !quotes.length) return;
+
+        const entries = quotes.map(tapeEntryHtml).join('<span class="ticker-divider">|</span>');
+        // Duplicate the run once so the CSS -50% translate loops seamlessly.
+        track.innerHTML = `<span class="ticker-run">${entries}<span class="ticker-divider">|</span></span>`
+            + `<span class="ticker-run" aria-hidden="true">${entries}<span class="ticker-divider">|</span></span>`;
+
+        track.querySelectorAll('.ticker-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const symbol = this.dataset.symbol;
+                if (symbol && !symbol.startsWith('^')) {
+                    analyzeSentiment(symbol);
+                }
+            });
+        });
+    }
+
+    function drawSparkline(canvas, series, positive) {
+        if (!canvas || !Array.isArray(series) || series.length < 2) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const min = Math.min(...series);
+        const max = Math.max(...series);
+        const span = max - min || 1;
+        const stepX = w / (series.length - 1);
+        const pad = 2;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.beginPath();
+        series.forEach((value, idx) => {
+            const x = idx * stepX;
+            const y = pad + (1 - (value - min) / span) * (h - pad * 2);
+            if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = positive ? '#00FF88' : '#FF3B3B';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+    }
+
+    function renderMoversTable(quotes) {
+        const body = document.getElementById('moversTableBody');
+        if (!body) return;
+
+        const stocks = quotes
+            .filter(quote => !String(quote.symbol || '').startsWith('^'))
+            .sort((a, b) => Math.abs(Number(b.change_percent || 0)) - Math.abs(Number(a.change_percent || 0)));
+
+        if (stocks.length === 0) {
+            body.innerHTML = '<tr><td colspan="9" class="text-center py-3" style="color: var(--text-muted);">NO QUOTE DATA</td></tr>';
+            return;
+        }
+
+        body.innerHTML = stocks.map((quote, idx) => {
+            const pct = Number(quote.change_percent || 0);
+            const chg = Number(quote.change || 0);
+            const dirClass = pct >= 0 ? 'mover-up' : 'mover-down';
+            const sign = pct >= 0 ? '+' : '-';
+            const cur = escapeHtml(quote.currency || '$');
+            const fmt = value => value === null || value === undefined
+                ? '—'
+                : Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+            return `
+                <tr class="mover-row" data-symbol="${sanitizeSymbol(quote.symbol)}">
+                    <td class="mover-symbol">${escapeHtml(quote.symbol)}</td>
+                    <td class="movers-name">${escapeHtml(quote.name || '')}</td>
+                    <td class="movers-spark"><canvas id="spark-${idx}" width="64" height="20"></canvas></td>
+                    <td class="text-end">${cur}${fmt(quote.price)}</td>
+                    <td class="text-end ${dirClass}">${sign}${cur}${fmt(Math.abs(chg))}</td>
+                    <td class="text-end ${dirClass}">${sign}${Math.abs(pct).toFixed(2)}%</td>
+                    <td class="text-end movers-extra">${cur}${fmt(quote.day_high)}</td>
+                    <td class="text-end movers-extra">${cur}${fmt(quote.day_low)}</td>
+                    <td class="text-end movers-extra">${compactNumber(quote.volume)}</td>
+                </tr>`;
+        }).join('');
+
+        stocks.forEach((quote, idx) => {
+            drawSparkline(
+                document.getElementById(`spark-${idx}`),
+                quote.spark,
+                Number(quote.change_percent || 0) >= 0
+            );
+        });
+
+        body.querySelectorAll('.mover-row').forEach(row => {
+            row.addEventListener('click', function() {
+                const symbol = this.dataset.symbol;
+                if (symbol) analyzeSentiment(symbol);
+            });
+        });
+    }
+
+    function loadTerminalQuotes() {
+        fetchJson(`/api/quotes?symbols=${encodeURIComponent(TAPE_SYMBOLS.join(','))}`)
+            .then(data => {
+                const quotes = data.quotes || [];
+                renderTickerTape(quotes);
+                renderMoversTable(quotes);
+                const label = document.getElementById('moversLastUpdated');
+                if (label && data.timestamp) {
+                    const time = new Date(data.timestamp).toLocaleTimeString('en-GB', { hour12: false });
+                    label.textContent = `AS OF ${time}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading terminal quotes:', error);
+                const track = document.getElementById('tickerTrack');
+                if (track) {
+                    track.innerHTML = '<span class="ticker-loading" style="color: var(--negative);">TAPE UNAVAILABLE</span>';
+                }
+                const body = document.getElementById('moversTableBody');
+                if (body) {
+                    body.innerHTML = '<tr><td colspan="8" class="text-center py-3" style="color: var(--text-muted);">QUOTES UNAVAILABLE</td></tr>';
+                }
+            });
+    }
+
+    initTerminalClocks();
+    loadTerminalQuotes();
+    setInterval(loadTerminalQuotes, QUOTES_REFRESH_MS);
+
 });

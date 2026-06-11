@@ -19,7 +19,7 @@
     {% block canonical %}{% endblock %}
 
     <!-- JSON-LD Schema -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" nonce="{{ csp_nonce }}">
     {
         "@context": "https://schema.org",
         "@type": "WebApplication",
@@ -31,12 +31,20 @@
     }
     </script>
 
+    <!-- Preconnect to CDNs so TLS handshakes overlap with HTML parsing -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 
@@ -93,21 +101,25 @@
                 <span style="font-size:0.75rem; color:var(--accent-amber,#FFA500); text-transform:uppercase; letter-spacing:0.1em;">
                     CONTACT
                 </span>
-                <button onclick="closeContactModal()" style="background:none; border:none; color:var(--text-muted,#666); cursor:pointer; font-size:1.1rem; padding:0; line-height:1;">&times;</button>
+                <button id="contactModalClose" type="button" style="background:none; border:none; color:var(--text-muted,#666); cursor:pointer; font-size:1.1rem; padding:0; line-height:1;">&times;</button>
             </div>
             <div style="padding:24px;">
                 <form id="contactModalForm">
                     <div style="margin-bottom:16px;">
-                        <input type="text" id="cmName" placeholder="Name" required
+                        <input type="text" id="cmName" placeholder="Name" maxlength="120" required
                             style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
                     </div>
                     <div style="margin-bottom:16px;">
-                        <input type="email" id="cmEmail" placeholder="Email" required
+                        <input type="email" id="cmEmail" placeholder="Email" maxlength="254" required
                             style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
                     </div>
                     <div style="margin-bottom:16px;">
-                        <textarea id="cmMessage" placeholder="Message" rows="4" required
+                        <textarea id="cmMessage" placeholder="Message" rows="4" maxlength="3000" required
                             style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+                    <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                        <input type="text" id="cmWebsite" name="website" tabindex="-1" autocomplete="off">
+                        <input type="text" id="cmCompany" name="company" tabindex="-1" autocomplete="off">
                     </div>
                     <button type="submit" id="cmSubmitBtn"
                         style="width:100%; background:var(--accent-amber,#FFA500); color:#000; border:none; font-family:inherit; font-size:0.78rem; font-weight:700; padding:11px; cursor:pointer; letter-spacing:0.05em;">
@@ -127,97 +139,18 @@
         {% block content %}{% endblock %}
     </main>
 
-
-    <!-- EmailJS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
     <!-- Chart.js with Date Adapter -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+        integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"
+        integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws" crossorigin="anonymous"></script>
     <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-
-    <!-- Contact Modal Logic -->
-    <script>
-    (function(){
-        var modal = document.getElementById('contactModal');
-        var form = document.getElementById('contactModalForm');
-        var successEl = document.getElementById('cmSuccess');
-        var errorEl = document.getElementById('cmError');
-        var submitBtn = document.getElementById('cmSubmitBtn');
-        var _ejsReady = false, _ejsCfg = null;
-
-        // Fetch EmailJS config once
-        fetch('/api/emailjs_config').then(function(r){return r.json();}).then(function(cfg){
-            if(cfg.service_id && cfg.public_key){
-                emailjs.init(cfg.public_key);
-                _ejsCfg = cfg;
-                _ejsReady = true;
-            }
-        }).catch(function(){});
-
-        window.openContactModal = function(){
-            form.style.display='';
-            successEl.style.display='none';
-            errorEl.style.display='none';
-            form.reset();
-            submitBtn.disabled=false;
-            submitBtn.textContent='SEND MESSAGE';
-            modal.style.display='flex';
-        };
-        window.closeContactModal = function(){
-            modal.style.display='none';
-        };
-
-        // Close on backdrop click
-        modal.addEventListener('click',function(e){
-            if(e.target===modal) closeContactModal();
-        });
-        // Close on Escape
-        document.addEventListener('keydown',function(e){
-            if(e.key==='Escape' && modal.style.display==='flex') closeContactModal();
-        });
-
-        form.addEventListener('submit',function(e){
-            e.preventDefault();
-            errorEl.style.display='none';
-            var name=document.getElementById('cmName').value.trim();
-            var email=document.getElementById('cmEmail').value.trim();
-            var message=document.getElementById('cmMessage').value.trim();
-            if(!name||!email||!message){
-                errorEl.textContent='All fields are required.';
-                errorEl.style.display='';
-                return;
-            }
-            if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
-                errorEl.textContent='Please enter a valid email.';
-                errorEl.style.display='';
-                return;
-            }
-            if(!_ejsReady){
-                errorEl.textContent='Contact service not configured. Please try again later.';
-                errorEl.style.display='';
-                return;
-            }
-            submitBtn.disabled=true;
-            submitBtn.textContent='SENDING...';
-            emailjs.send(_ejsCfg.service_id, _ejsCfg.template_id, {
-                from_name: name,
-                from_email: email,
-                message: message,
-            }).then(function(){
-                form.style.display='none';
-                successEl.style.display='';
-            },function(err){
-                errorEl.textContent='Failed to send. Please try again.';
-                errorEl.style.display='';
-                submitBtn.disabled=false;
-                submitBtn.textContent='SEND MESSAGE';
-            });
-        });
-    })();
-    </script>
+    <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
 
     {% block extra_scripts %}{% endblock %}
 </body>

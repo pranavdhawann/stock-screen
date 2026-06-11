@@ -1958,3 +1958,220 @@ body,
 /* ============================================================
    END OF BLOOMBERG TERMINAL THEME
    ============================================================ */
+
+/* ============================================================
+   TICKER TAPE — Bloomberg-style scrolling quote strip
+   ============================================================ */
+.ticker-tape {
+    overflow: hidden;
+    white-space: nowrap;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 6px 0;
+    margin: 0 calc(-1 * clamp(8px, 2vw, 16px));
+}
+
+.ticker-track {
+    display: inline-flex;
+    align-items: center;
+    animation: ticker-scroll 45s linear infinite;
+    will-change: transform;
+}
+
+.ticker-tape:hover .ticker-track {
+    animation-play-state: paused;
+}
+
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.ticker-run {
+    display: inline-flex;
+    align-items: center;
+}
+
+.ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+.ticker-item:hover .ticker-symbol {
+    color: var(--accent-amber);
+}
+
+.ticker-symbol {
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.ticker-price {
+    color: var(--text-secondary);
+}
+
+.tape-up .ticker-change { color: var(--positive); }
+.tape-down .ticker-change { color: var(--negative); }
+
+.ticker-divider {
+    color: var(--border);
+}
+
+.ticker-loading {
+    padding: 0 14px;
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   TERMINAL STATUSLINE — world clocks + data source
+   ============================================================ */
+.terminal-statusline {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+.status-clock-label {
+    color: var(--accent-amber);
+    margin-right: 4px;
+    letter-spacing: 0.08em;
+}
+
+/* ============================================================
+   MARKET CARD — dense stats row
+   ============================================================ */
+.market-stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 6px 0 8px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+}
+
+.market-stat-label {
+    color: var(--text-muted);
+    margin-right: 4px;
+    letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   MARKET MOVERS — dense quote board
+   ============================================================ */
+.movers-table {
+    width: 100%;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    border-collapse: collapse;
+}
+
+.movers-table thead th {
+    color: var(--accent-amber);
+    font-weight: 600;
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.movers-table tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(42, 45, 53, 0.5);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.movers-table tbody tr:nth-child(odd) {
+    background: var(--bg-row-alt);
+}
+
+.mover-row {
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.mover-row:hover {
+    background: rgba(255, 165, 0, 0.08) !important;
+}
+
+.mover-symbol {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.mover-up { color: var(--positive) !important; }
+.mover-down { color: var(--negative) !important; }
+
+.movers-name {
+    color: var(--text-muted);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    .movers-extra,
+    .movers-name {
+        display: none;
+    }
+
+    .ticker-tape {
+        font-size: 0.66rem;
+    }
+}
+
+/* ============================================================
+   FILING QUICK STATS — terminal strip on Company Filings tab
+   ============================================================ */
+.filing-stats-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    padding: 8px 14px;
+}
+
+.filing-stats-strip:empty {
+    display: none;
+}
+
+.filing-stat-label {
+    color: var(--accent-amber);
+    margin-right: 5px;
+    letter-spacing: 0.06em;
+}
+
+/* Movers sparkline column */
+.movers-spark {
+    width: 72px;
+}
+
+.movers-spark canvas {
+    display: block;
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .movers-spark {
+        display: none;
+    }
+}

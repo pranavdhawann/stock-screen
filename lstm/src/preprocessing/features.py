@@ -47,18 +47,18 @@ def _bb_width(close: pd.Series, period: int = 20, n_std: float = 2.0) -> pd.Seri
 
 
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    o, h, l, c, v = df["Open"], df["High"], df["Low"], df["Close"], df["Volume"]
+    o, h, low, c, v = df["Open"], df["High"], df["Low"], df["Close"], df["Volume"]
     out = pd.DataFrame(index=df.index)
 
     log_ret = np.log(c / c.shift(1))
     out[TARGET_COL] = log_ret
-    out["hl_range"] = (h - l) / c
+    out["hl_range"] = (h - low) / c
     out["co_gap"] = (c - o) / o
 
-    hl = (h - l).replace(0.0, np.nan)
+    hl = (h - low).replace(0.0, np.nan)
     out["upper_shadow"] = (h - c) / hl
-    out["lower_shadow"] = (c - l) / hl
-    out["vwap_proxy"] = (h + l + c) / 3.0
+    out["lower_shadow"] = (c - low) / hl
+    out["vwap_proxy"] = (h + low + c) / 3.0
 
     out["log_volume"] = np.log1p(v)
     out["volume_ratio"] = v / v.rolling(20, min_periods=20).mean()
@@ -71,7 +71,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         out[f"ret_sharpe_{w}"] = m / s.replace(0.0, np.nan)
 
     out["rsi_14"] = _rsi(c, 14)
-    out["atr_14"] = _atr(h, l, c, 14)
+    out["atr_14"] = _atr(h, low, c, 14)
     macd, signal = _macd(c)
     out["macd"] = macd
     out["macd_signal"] = signal

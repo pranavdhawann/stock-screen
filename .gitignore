@@ -1,11 +1,7 @@
 # ============================================================
-# PUBLIC: README, LICENSE, .env.example, HTML/CSS skeleton, Dockerfile
-# HIDDEN: All backend logic, API routes, services, configs
+# Track application source, tests, deployment entrypoints, and docs needed
+# to rebuild the project. Keep generated files and secrets out of git.
 # ============================================================
-
-# --- Core backend logic (HIDE) ---
-app/
-wsgi.py
 
 # --- Database & cache ---
 supabase_schema.sql
@@ -23,6 +19,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+.ruff_cache/
+.mypy_cache/
 
 # --- Virtual environments ---
 .venv
@@ -46,14 +44,13 @@ logs/
 # --- OS / IDE ---
 .DS_Store
 Thumbs.db
+desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
 
 # --- Cloud / deploy configs ---
-.dockerignore
-.gcloudignore
 cloudbuild.yaml
 .claude/
 
@@ -62,14 +59,15 @@ docs/
 
 # --- Test / coverage ---
 .pytest_cache/
-tests/
 .github/
 coverage/
 htmlcov/
 .coverage
+supabase/.temp/
 
 # --- Model / ML caches ---
 model_cache/
+lstm/predict/plots/
 
 # --- Assets (logo, images) ---
 logo/
@@ -79,6 +77,10 @@ static/images/
 all_files*.txt
 replace_script.py
 =*
+*.bak
+*.tmp
+*.orig
+_sb_audit.py
 
 # --- Boilerplate docs with placeholder emails ---
 CODE_OF_CONDUCT.md

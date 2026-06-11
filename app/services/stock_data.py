@@ -106,6 +106,9 @@ def fetch_stock_data(symbol, period='30d'):
         quotes = result["indicators"]["quote"][0]
 
         chart_data = []
+        open_prices = quotes.get("open", [])
+        high_prices = quotes.get("high", [])
+        low_prices = quotes.get("low", [])
         close_prices = quotes.get("close", [])
         volumes = quotes.get("volume", [])
         for i, timestamp in enumerate(timestamps):
@@ -118,7 +121,11 @@ def fetch_stock_data(symbol, period='30d'):
                     volume = int(volumes[i])
                 chart_data.append({
                     "date": timestamp * 1000,
+                    "open": round(float(open_prices[i]), 2) if i < len(open_prices) and open_prices[i] is not None else None,
+                    "high": round(float(high_prices[i]), 2) if i < len(high_prices) and high_prices[i] is not None else None,
+                    "low": round(float(low_prices[i]), 2) if i < len(low_prices) and low_prices[i] is not None else None,
                     "price": round(price, 2),
+                    "close": round(price, 2),
                     "volume": volume,
                 })
 

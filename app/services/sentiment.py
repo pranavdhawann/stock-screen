@@ -1,19 +1,62 @@
+import hashlib
 import json
 import logging
+import re
 from groq import Groq
 from app.config import GROQ_API_KEY, GROQ_MODEL
 from app.services.cache import sentiment_cache, get_cached, set_cached
+from app.services.groq_guard import groq_disabled, note_groq_error
 
 logger = logging.getLogger(__name__)
 
 _client = None
 
+# Finance-tuned lexicon used when Groq is unavailable. Shared shape with
+# the keyword extractor in insights.py but tuned for headline scoring.
+POSITIVE_WORDS = frozenset({
+    'growth', 'profit', 'profits', 'revenue', 'success', 'strong', 'increase',
+    'increases', 'gain', 'gains', 'rise', 'rises', 'boost', 'boosts',
+    'improve', 'improves', 'improved', 'excellent', 'outstanding', 'record',
+    'breakthrough', 'innovation', 'expansion', 'partnership', 'deal',
+    'acquisition', 'investment', 'upgrade', 'upgrades', 'upgraded', 'beat',
+    'beats', 'exceed', 'exceeds', 'surge', 'surges', 'soar', 'soars', 'rally',
+    'rallies', 'bullish', 'optimistic', 'confidence', 'momentum', 'outperform',
+    'outperforms', 'win', 'wins', 'jump', 'jumps', 'climb', 'climbs', 'high',
+    'higher', 'top', 'tops', 'buy', 'dividend', 'buyback', 'blockbuster',
+})
+NEGATIVE_WORDS = frozenset({
+    'loss', 'losses', 'decline', 'declines', 'fall', 'falls', 'fell', 'drop',
+    'drops', 'dropped', 'crash', 'crashes', 'plunge', 'plunges', 'slump',
+    'slumps', 'weak', 'weaker', 'poor', 'disappoint', 'disappoints',
+    'disappointing', 'miss', 'misses', 'missed', 'cut', 'cuts', 'reduce',
+    'layoff', 'layoffs', 'crisis', 'concern', 'concerns', 'risk', 'risks',
+    'threat', 'threats', 'problem', 'problems', 'trouble', 'struggle',
+    'struggles', 'pressure', 'volatility', 'uncertainty', 'bearish',
+    'pessimistic', 'downgrade', 'downgrades', 'downgraded', 'warning',
+    'lawsuit', 'probe', 'investigation', 'recall', 'fraud', 'sink', 'sinks',
+    'tumble', 'tumbles', 'selloff', 'sell-off', 'low', 'lower', 'short',
+})
+
 
 def _get_client():
     global _client
+    if groq_disabled():
+        return None
     if _client is None and GROQ_API_KEY:
         _client = Groq(api_key=GROQ_API_KEY)
     return _client
+
+
+def lexicon_sentiment(text):
+    """Score text against the finance lexicon. Returns (label, confidence)."""
+    words = re.findall(r"[a-z][a-z'-]*", str(text or '').lower())
+    pos = sum(1 for word in words if word in POSITIVE_WORDS)
+    neg = sum(1 for word in words if word in NEGATIVE_WORDS)
+    if pos == neg:
+        return 'Neutral', 0.5
+    # More hits = more confidence, capped well below LLM-grade certainty.
+    confidence = round(min(0.8, 0.55 + 0.06 * abs(pos - neg)), 2)
+    return ('Positive', confidence) if pos > neg else ('Negative', confidence)
 
 
 def analyze_news_sentiment(news_items, symbol=""):
@@ -21,15 +64,19 @@ def analyze_news_sentiment(news_items, symbol=""):
     if not news_items:
         return []
 
-    # Build cache key from symbol + titles
-    cache_key = f"{symbol}|" + "|".join(item['title'][:50] for item in news_items)
+    # Key on a digest of the titles - the raw concatenation was hundreds of
+    # characters and bloated the Supabase key column.
+    titles_digest = hashlib.sha256(
+        "|".join(item['title'] for item in news_items).encode('utf-8', 'ignore')
+    ).hexdigest()[:32]
+    cache_key = f"{symbol}|{titles_digest}"
     cached = get_cached(sentiment_cache, cache_key)
     if cached is not None:
         return cached
 
     client = _get_client()
     if not client:
-        logger.warning("Groq client not available (missing API key). Returning unknown sentiment.")
+        logger.warning("Groq client not available; using lexicon sentiment analyzer.")
         return _fallback_sentiment(news_items)
 
     # Build batch prompt — send all news in one request
@@ -80,12 +127,27 @@ Example: [{{"index": 1, "sentiment": "Positive", "confidence": 0.82}}]"""
 
     except Exception as e:
         logger.error("Groq sentiment analysis failed: %s", e)
+        note_groq_error(e)
         return _fallback_sentiment(news_items)
 
 
 def _fallback_sentiment(news_items):
-    """Return news items with unknown sentiment when Groq is unavailable."""
-    return [{**item, 'sentiment': 'Unknown', 'confidence': 0} for item in news_items]
+    """Score items with the built-in lexicon when Groq is unavailable.
+
+    Results are intentionally not cached so Groq is retried once it works.
+    """
+    result = []
+    for item in news_items:
+        label, confidence = lexicon_sentiment(
+            f"{item.get('title', '')} {item.get('summary', '')}"
+        )
+        result.append({
+            **item,
+            'sentiment': label,
+            'confidence': confidence,
+            'analysis_source': 'lexicon',
+        })
+    return result
 
 
 def compute_overall_sentiment(analyzed_news):
@@ -120,10 +182,9 @@ def compute_overall_sentiment(analyzed_news):
 
     if avg_score >= 0.3:
         return {"overall_sentiment": "Positive", "confidence": round(min(0.95, avg_confidence), 2)}
-    elif avg_score <= -0.3:
+    if avg_score <= -0.3:
         return {"overall_sentiment": "Negative", "confidence": round(min(0.95, avg_confidence), 2)}
-    else:
-        return {"overall_sentiment": "Neutral", "confidence": round(avg_confidence, 2)}
+    return {"overall_sentiment": "Neutral", "confidence": round(avg_confidence, 2)}
 
 
 def derive_sentiment_timeline(analyzed_news):

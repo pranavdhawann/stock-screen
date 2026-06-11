@@ -15,6 +15,13 @@
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Ticker Tape (Bloomberg-style scrolling quotes) -->
+    <div class="ticker-tape" id="tickerTape" aria-hidden="true">
+        <div class="ticker-track" id="tickerTrack">
+            <span class="ticker-loading terminal-cursor">LOADING TAPE</span>
+        </div>
+    </div>
+
     <!-- Title Section -->
     <div class="title-section">
         <div class="container">
@@ -37,16 +44,56 @@
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <!-- Market Overview Header -->
-                    <div class="mb-4">
+                    <div class="mb-4 d-flex justify-content-between align-items-end flex-wrap gap-2">
                         <h4 class="text-uppercase fw-bold mb-1" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
                             MARKET OVERVIEW
                         </h4>
+                        <div class="terminal-statusline" id="terminalStatusline">
+                            <span class="status-clock"><span class="status-clock-label">NY</span> <span id="clockNY">--:--:--</span></span>
+                            <span class="status-clock"><span class="status-clock-label">LDN</span> <span id="clockLDN">--:--:--</span></span>
+                            <span class="status-clock"><span class="status-clock-label">MUM</span> <span id="clockMUM">--:--:--</span></span>
+                            <span class="status-clock"><span class="status-clock-label">SRC</span> YAHOO FIN</span>
+                        </div>
                     </div>
 
                     <!-- Index Charts -->
                     <div id="defaultMarketsSection">
                         <div class="markets-grid" id="defaultMarketsContainer">
                             <!-- Default market data will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Market Movers (dense quote board) -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="text-uppercase fw-bold mb-0" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
+                                MARKET MOVERS
+                            </h4>
+                            <span id="moversLastUpdated" style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted);"></span>
+                        </div>
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="movers-table" id="moversTable">
+                                        <thead>
+                                            <tr>
+                                                <th>TICKER</th>
+                                                <th class="movers-name">NAME</th>
+                                                <th class="movers-spark">30D</th>
+                                                <th class="text-end">LAST</th>
+                                                <th class="text-end">CHG</th>
+                                                <th class="text-end">%CHG</th>
+                                                <th class="text-end movers-extra">HIGH</th>
+                                                <th class="text-end movers-extra">LOW</th>
+                                                <th class="text-end movers-extra">VOL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="moversTableBody">
+                                            <tr><td colspan="9" class="text-center py-3"><span class="terminal-cursor">LOADING QUOTES</span></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -177,6 +224,50 @@
                                                     <div class="chart-expand-overlay" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 8px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity 0.3s;">
                                                         
                                                     </div>
+                                                </div>
+                                                <div id="technicalTogglePanel" class="mt-3" style="display: none;">
+                                                    <div class="d-flex flex-wrap gap-3 align-items-center" style="font-family: var(--font-mono); font-size: 0.72rem;">
+                                                        <label><input class="indicator-toggle" type="checkbox" value="sma_20" checked> SMA 20</label>
+                                                        <label><input class="indicator-toggle" type="checkbox" value="ema_20" checked> EMA 20</label>
+                                                        <label><input class="indicator-toggle" type="checkbox" value="bb" checked> Bollinger</label>
+                                                        <label><input class="indicator-toggle" type="checkbox" value="sentiment" checked> Sentiment</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-4" id="traderMetricsPanel" style="display: none;">
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-header" style="padding: 10px 14px;">Volume + Liquidity</div>
+                                            <div class="card-body" style="padding: 14px;">
+                                                <div style="height: 180px;">
+                                                    <canvas id="volumeLiquidityChart"></canvas>
+                                                </div>
+                                                <div id="volumeSummary" class="mt-2" style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary);"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-header" style="padding: 10px 14px;">Sentiment Timeline</div>
+                                            <div class="card-body" style="padding: 14px;">
+                                                <div style="height: 180px;">
+                                                    <canvas id="sentimentTimelineChart"></canvas>
+                                                </div>
+                                                <div id="sentimentDivergence" class="mt-2" style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary);"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-header" style="padding: 10px 14px;">Technical Indicators</div>
+                                            <div class="card-body" style="padding: 14px;">
+                                                <div id="indicatorSummary" style="font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.8; color: var(--text-secondary);"></div>
+                                                <div style="height: 150px;">
+                                                    <canvas id="indicatorMomentumChart"></canvas>
                                                 </div>
                                             </div>
                                         </div>

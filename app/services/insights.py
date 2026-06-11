@@ -3,6 +3,7 @@ import re
 import logging
 from groq import Groq
 from app.config import GROQ_API_KEY, GROQ_MODEL, get_currency
+from app.services.groq_guard import groq_disabled, note_groq_error
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,8 @@ _client = None
 
 def _get_client():
     global _client
+    if groq_disabled():
+        return None
     if _client is None and GROQ_API_KEY:
         _client = Groq(api_key=GROQ_API_KEY)
     return _client
@@ -40,12 +43,12 @@ def _sentiment_label(pos, neg, total):
     ratio = (pos - neg) / total
     if ratio >= 0.3:
         return "Bullish"
-    elif ratio <= -0.3:
+    if ratio <= -0.3:
         return "Bearish"
     return "Neutral"
 
 
-def _compute_source_breakdown(sentiment_counts, company_name, symbol):
+def _compute_source_breakdown(sentiment_counts):
     pos = sentiment_counts.get("Positive", 0)
     neg = sentiment_counts.get("Negative", 0)
     neu = sentiment_counts.get("Neutral", 0) + sentiment_counts.get("Unknown", 0)
@@ -220,7 +223,7 @@ Rules: catalysts max 3, risks max 3, keywords max 15. All text concise."""
         safe = _safe_get_parsed(parsed)
 
         # Server-side computed fields
-        source_breakdown = _compute_source_breakdown(sentiment_counts, company_name, symbol)
+        source_breakdown = _compute_source_breakdown(sentiment_counts)
         report_summary = _build_report_summary(parsed, company_name, symbol)
         compat = _build_backward_compat(parsed, sentiment_counts)
 
@@ -233,6 +236,7 @@ Rules: catalysts max 3, risks max 3, keywords max 15. All text concise."""
 
     except Exception as e:
         logger.error("Groq insights generation failed: %s", e)
+        note_groq_error(e)
         return _fallback_insights(news_items, symbol, company_name, sentiment_counts)
 
 
@@ -260,7 +264,31 @@ def _fallback_insights(news_items, symbol, company_name, sentiment_counts):
         signal = "Neutral"
         outlook = f"Neutral outlook for {symbol} with balanced sentiment."
 
-    source_breakdown = _compute_source_breakdown(sentiment_counts, company_name, symbol)
+    source_breakdown = _compute_source_breakdown(sentiment_counts)
+
+    def _headline(item):
+        title = str(item.get('title') or '').strip()
+        return title if len(title) <= 110 else f"{title[:107]}..."
+
+    positive_items = [i for i in (news_items or []) if i.get('sentiment') == 'Positive']
+    negative_items = [i for i in (news_items or []) if i.get('sentiment') == 'Negative']
+    positive_items.sort(key=lambda i: i.get('confidence', 0), reverse=True)
+    negative_items.sort(key=lambda i: i.get('confidence', 0), reverse=True)
+
+    catalysts = [
+        {"tag": "News", "direction": "up", "text": _headline(item)}
+        for item in positive_items[:3]
+    ]
+    risks = [
+        {"text": _headline(item), "severity": "Medium" if item.get('confidence', 0) >= 0.65 else "Low"}
+        for item in negative_items[:3]
+    ]
+    keywords = extract_keywords_from_news(news_items or [])
+
+    note = (
+        f"Lexicon-based read of {total} recent headlines: {pos} positive vs {neg} negative. "
+        "AI analyst commentary is unavailable right now, so treat this as a headline-count signal."
+    )
 
     return {
         # Rich fields (with safe defaults)
@@ -268,18 +296,18 @@ def _fallback_insights(news_items, symbol, company_name, sentiment_counts):
             "signal": signal,
             "one_liner": outlook,
             "confidence_label": "Low",
-            "confidence_explanation": "AI analysis temporarily unavailable.",
+            "confidence_explanation": "Derived from headline keyword analysis, not the full AI model.",
         },
-        "analyst_note": "AI insights temporarily unavailable. Showing basic analysis.",
-        "catalysts": [],
-        "risks": [],
+        "analyst_note": note,
+        "catalysts": catalysts,
+        "risks": risks,
         "sentiment_velocity": {"trend": "stable", "label": "Insufficient data"},
-        "keywords_enriched": [],
+        "keywords_enriched": keywords,
         "trending": {
-            "is_high_volume": False,
-            "reason": "",
+            "is_high_volume": total >= 15,
+            "reason": f"{total} headlines in the lookback window" if total >= 15 else "",
             "category": "other",
-            "what_to_watch": "",
+            "what_to_watch": _headline(positive_items[0]) if positive_items else "",
         },
         "source_breakdown": source_breakdown,
         "report_summary": {
@@ -289,9 +317,9 @@ def _fallback_insights(news_items, symbol, company_name, sentiment_counts):
         },
         # Backward-compat fields
         "market_outlook": outlook,
-        "risk_factors": [],
-        "opportunities": [],
-        "key_points": ["AI insights temporarily unavailable. Showing basic analysis."],
+        "risk_factors": [r["text"] for r in risks],
+        "opportunities": [c["text"] for c in catalysts],
+        "key_points": [outlook, note],
         "sentiment_summary": {
             "positive_news": sentiment_counts.get("Positive", 0),
             "negative_news": sentiment_counts.get("Negative", 0),

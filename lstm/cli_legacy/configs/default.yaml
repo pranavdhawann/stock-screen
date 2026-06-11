@@ -34,5 +34,5 @@ training:
   seed: 42
 
 artifacts:
-  checkpoint: artifacts/model.pt
+  checkpoint: model.pt
   metrics: artifacts/test_metrics.csv

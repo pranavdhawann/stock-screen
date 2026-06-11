@@ -1,13 +1,17 @@
 """
-Hybrid cache layer: Supabase (persistent) → in-memory TTLCache (fallback).
+Hybrid cache layer: in-memory TTLCache (fast) → Supabase (persistent).
 
-Every get/set checks Supabase first. If Supabase is not configured or
-the call fails, falls back to the original in-memory cachetools caches.
-This means the app works identically with or without Supabase credentials.
+Reads hit the in-memory cache first (no network), then fall back to
+Supabase and backfill memory on a hit. Writes update memory synchronously
+and persist to Supabase on a background worker so the request path never
+waits on the network. The app works identically with or without Supabase
+credentials.
 """
 
 from cachetools import TTLCache
+from concurrent.futures import ThreadPoolExecutor
 from threading import RLock
+import logging
 from app.config import (
     STOCK_DATA_CACHE_SIZE, STOCK_DATA_TTL,
     NEWS_CACHE_SIZE, NEWS_TTL,
@@ -15,6 +19,8 @@ from app.config import (
     SEC_FILINGS_CACHE_SIZE, SEC_FILINGS_TTL,
     AGGREGATED_NEWS_CACHE_SIZE, AGGREGATED_NEWS_TTL,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── In-memory caches (fallback when Supabase is not available) ──
 stock_data_cache = TTLCache(maxsize=STOCK_DATA_CACHE_SIZE, ttl=STOCK_DATA_TTL)
@@ -30,7 +36,10 @@ def _sb():
     try:
         from app.services import supabase_client as sbc
         return sbc if sbc.is_available() else None
-    except Exception:
+    except ImportError:
+        return None
+    except Exception as exc:
+        logger.warning("Persistent cache client unavailable: %s", exc)
         return None
 
 
@@ -47,8 +56,9 @@ def _sb_map():
 
     sbc = _sb()
     if not sbc:
-        _SB_MAP = {}
-        return _SB_MAP
+        # Don't memoize the empty map: a transient failure at first call
+        # would otherwise disable the persistent cache for the process life.
+        return {}
 
     _SB_MAP = {
         id(stock_data_cache): (sbc.get_stock_data_cache, sbc.set_stock_data_cache),
@@ -59,8 +69,17 @@ def _sb_map():
     return _SB_MAP
 
 
+# Background worker for Supabase persistence so requests never block on it.
+_persist_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="cache-persist")
+
+
 def get_cached(cache, key):
-    """Try Supabase first, then in-memory."""
+    """In-memory first (no network), then Supabase with memory backfill."""
+    with _cache_lock:
+        value = cache.get(key)
+    if value is not None:
+        return value
+
     mapping = _sb_map()
     sb_pair = mapping.get(id(cache))
     if sb_pair:
@@ -68,26 +87,30 @@ def get_cached(cache, key):
         try:
             result = sb_get(key)
             if result is not None:
+                # Backfill memory so subsequent reads skip the network.
+                with _cache_lock:
+                    cache[key] = result
                 return result
-        except Exception:
-            pass  # fall through to in-memory
+        except Exception as exc:
+            logger.warning("Persistent cache read failed for %r: %s", key, exc)
 
-    with _cache_lock:
-        return cache.get(key)
+    return None
+
+
+def _persist_to_supabase(sb_set, key, value):
+    try:
+        sb_set(key, value)
+    except Exception as exc:
+        logger.warning("Persistent cache write failed for %r: %s", key, exc)
 
 
 def set_cached(cache, key, value):
-    """Write to both Supabase and in-memory."""
-    # Always write in-memory (fast local cache)
+    """Write in-memory synchronously; persist to Supabase in the background."""
     with _cache_lock:
         cache[key] = value
 
-    # Also persist to Supabase
     mapping = _sb_map()
     sb_pair = mapping.get(id(cache))
     if sb_pair:
         _, sb_set = sb_pair
-        try:
-            sb_set(key, value)
-        except Exception:
-            pass  # in-memory still has it
+        _persist_executor.submit(_persist_to_supabase, sb_set, key, value)

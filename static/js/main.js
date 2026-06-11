@@ -123,6 +123,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    document.querySelectorAll('[data-action="open-contact-modal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            if (typeof window.openContactModal === 'function') {
+                window.openContactModal();
+            }
+        });
+    });
+
     // Market hours indicator (US and India)
     const statusDot = document.getElementById('statusDot');
     const statusLabel = document.getElementById('statusLabel');

@@ -19,18 +19,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.preprocessing import StandardScaler
 
-ROOT = Path(__file__).resolve().parents[1]
+LEGACY_ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.data import load_ohlcv
-from src.models import LSTMForecaster
-from src.preprocessing import build_features
-from src.utils import load_config
+from src.data import load_ohlcv  # noqa: E402
+from src.models import LSTMForecaster  # noqa: E402
+from src.preprocessing import build_features  # noqa: E402
+from src.utils import load_config  # noqa: E402
 
 PREDICT = ROOT / "predict"
 PLOTS = PREDICT / "plots"
 PLOTS.mkdir(parents=True, exist_ok=True)
+
+SAFE_CHECKPOINT_GLOBALS = [
+    StandardScaler,
+    (np.core.multiarray.scalar, "numpy._core.multiarray.scalar"),
+    (np.core.multiarray._reconstruct, "numpy._core.multiarray._reconstruct"),
+    np.dtype,
+    type(np.dtype("float64")),
+    np.ndarray,
+]
 
 plt.rcParams.update({
     "figure.dpi": 130,
@@ -52,7 +63,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=30,
         help="Days of history to show before the forecast window (default 30)",
     )
-    ap.add_argument("--config", type=Path, default=ROOT / "configs" / "default.yaml")
+    ap.add_argument("--config", type=Path, default=LEGACY_ROOT / "configs" / "default.yaml")
     ap.add_argument("--ckpt", "--checkpoint", dest="ckpt", type=Path, default=None, help="Override checkpoint path")
     ap.add_argument(
         "--data-dir",
@@ -79,7 +90,8 @@ def load_artifacts(cfg_path: Path, ckpt_path: Path | None) -> tuple[dict, dict]:
             f"Checkpoint not found at {resolved_ckpt}. "
             "Provide a valid checkpoint path via --ckpt."
         )
-    ckpt = torch.load(resolved_ckpt, map_location="cpu", weights_only=False)
+    with torch.serialization.safe_globals(SAFE_CHECKPOINT_GLOBALS):
+        ckpt = torch.load(resolved_ckpt, map_location="cpu", weights_only=True)
     return cfg, ckpt
 
 
@@ -213,9 +225,9 @@ def plot(
     pivot_date = hist_dates.iloc[-1]
     pivot_price = last_close
 
-    all_act_dates = [pivot_date] + list(act_dates)
+    all_act_dates = [pivot_date, *list(act_dates)]
     all_act_prices = np.concatenate([[pivot_price], act_prices])
-    all_pred_dates = [pivot_date] + list(act_dates)
+    all_pred_dates = [pivot_date, *list(act_dates)]
     all_pred_prices = np.concatenate([[pivot_price], pred_prices])
 
     fig, ax = plt.subplots(figsize=(13, 5))
@@ -244,8 +256,8 @@ def plot(
 
     if rmse_per_step:
         band = np.array(rmse_per_step[: len(pred_prices)], dtype=float)
-        upper = [pivot_price] + [p * np.exp(r) for p, r in zip(pred_prices, band)]
-        lower = [pivot_price] + [p * np.exp(-r) for p, r in zip(pred_prices, band)]
+        upper = [pivot_price] + [p * np.exp(r) for p, r in zip(pred_prices, band, strict=True)]
+        lower = [pivot_price] + [p * np.exp(-r) for p, r in zip(pred_prices, band, strict=True)]
         ax.fill_between(all_pred_dates, lower, upper, alpha=0.12, color="#DD8452", label="+-1 RMSE")
 
     ax.axvline(pivot_date, color="gray", linestyle=":", linewidth=1.2)
@@ -343,7 +355,7 @@ def main(argv: list[str] | None = None) -> None:
     act_prices = actual_future["Close"].to_numpy(dtype=float)
     print(f"\n{'':8} {'Pred log-ret':>12} {'Pred $':>10} {'Actual $':>10} {'Error':>8}")
     print("-" * 52)
-    for i, (lr, pp, ap) in enumerate(zip(pred_log_rets, pred_prices, act_prices)):
+    for i, (lr, pp, ap) in enumerate(zip(pred_log_rets, pred_prices, act_prices, strict=True)):
         print(f"h+{i+1:<5}  {lr*100:>+10.3f}%  ${pp:>8.2f}  ${ap:>8.2f}  {pp-ap:>+7.2f}")
 
 

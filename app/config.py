@@ -4,6 +4,11 @@ import os
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
 
+# Supabase server-side cache/storage. Keep the service key server-only.
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+TRUST_PROXY_HEADERS = os.environ.get('TRUST_PROXY_HEADERS', '').lower() in {'1', 'true', 'yes'}
+
 # Cache TTL (seconds)
 STOCK_DATA_TTL = 300      # 5 minutes
 NEWS_TTL = 900             # 15 minutes
@@ -22,11 +27,7 @@ SEC_EDGAR_HEADERS = {
 }
 SEC_FILINGS_TTL = 1800  # 30 minutes
 
-# Resend Email Configuration
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL', '')
-
-# EmailJS Configuration (frontend contact form)
+# EmailJS Configuration (server-side contact form)
 EMAILJS_SERVICE_ID = os.environ.get('EMAILJS_SERVICE_ID', '')
 EMAILJS_TEMPLATE_ID = os.environ.get('EMAILJS_TEMPLATE_ID', '')
 EMAILJS_PUBLIC_KEY = os.environ.get('EMAILJS_PUBLIC_KEY', '')
@@ -58,6 +59,7 @@ INDIAN_STOCKS = [
 # Complete stock directory (single source of truth)
 STOCK_DIRECTORY = [
     # US Stocks
+    {"symbol": "SPY", "name": "SPDR S&P 500 ETF Trust"},
     {"symbol": "AAPL", "name": "Apple Inc."},
     {"symbol": "MSFT", "name": "Microsoft Corporation"},
     {"symbol": "GOOGL", "name": "Alphabet Inc."},
@@ -130,20 +132,26 @@ MARKET_INDICES = {
 }
 
 
+def _normalize_symbol(symbol):
+    return str(symbol or "").upper()
+
+
 def get_company_name(symbol):
-    return _COMPANY_NAMES.get(symbol, f"{symbol} Corporation")
+    normalized = _normalize_symbol(symbol)
+    return _COMPANY_NAMES.get(normalized, f"{normalized} Corporation")
 
 
 def get_stock_metadata(symbol):
-    return _STOCKS_BY_SYMBOL.get(symbol.upper(), {})
+    return _STOCKS_BY_SYMBOL.get(_normalize_symbol(symbol), {})
 
 
 def is_indian_stock(symbol):
-    return symbol in INDIAN_STOCKS
+    return _normalize_symbol(symbol) in INDIAN_STOCKS
 
 
 def get_yahoo_symbol(symbol):
-    return f"{symbol}.NS" if is_indian_stock(symbol) else symbol
+    normalized = _normalize_symbol(symbol)
+    return f"{normalized}.NS" if is_indian_stock(normalized) else normalized
 
 
 def get_currency(symbol):

@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application
 COPY wsgi.py .
 COPY app/ app/
+COPY lstm/ lstm/
 COPY templates/ templates/
 COPY static/ static/
 
@@ -35,4 +36,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')" || exit 1
 
 # Gunicorn production server
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 --preload wsgi:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 wsgi:app

@@ -1,9 +1,11 @@
+import re
 import requests
 import logging
 from urllib.parse import urlparse
 from groq import Groq
 from app.config import SEC_EDGAR_HEADERS, GROQ_API_KEY, GROQ_MODEL
 from app.services.cache import sec_filings_cache, get_cached, set_cached
+from app.services.groq_guard import groq_disabled, note_groq_error
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,8 @@ _SEC_ALLOWED_HOSTS = {"sec.gov", "www.sec.gov"}
 
 def _get_client():
     global _client
+    if groq_disabled():
+        return None
     if _client is None and GROQ_API_KEY:
         _client = Groq(api_key=GROQ_API_KEY)
     return _client
@@ -21,8 +25,10 @@ def _get_client():
 
 def is_allowed_sec_url(url):
     """Return True only for SEC-hosted HTTPS filing archive URLs."""
+    if not isinstance(url, str):
+        return False
     try:
-        parsed = urlparse((url or "").strip())
+        parsed = urlparse(url.strip())
     except ValueError:
         return False
 
@@ -35,6 +41,23 @@ def is_allowed_sec_url(url):
 
     # Limit to filing archive pages to reduce SSRF surface.
     return parsed.path.startswith("/Archives/")
+
+
+def _fetch_sec_text(url, byte_limit=600_000):
+    with requests.get(url, headers=SEC_EDGAR_HEADERS, timeout=15, stream=True) as resp:
+        resp.raise_for_status()
+        chunks = []
+        total = 0
+        for chunk in resp.iter_content(chunk_size=8192, decode_unicode=True):
+            if not chunk:
+                continue
+            total += len(chunk)
+            if total > byte_limit:
+                remaining = byte_limit - (total - len(chunk))
+                chunks.append(chunk[: max(0, remaining)])
+                break
+            chunks.append(chunk)
+        return "".join(chunks)
 
 
 def _load_cik_map():
@@ -52,10 +75,12 @@ def _load_cik_map():
             entry["ticker"].upper(): str(entry["cik_str"]).zfill(10)
             for entry in data.values()
         }
+        return _cik_map
     except Exception as e:
+        # Leave _cik_map unset so the next request retries instead of
+        # serving "no CIK found" for the rest of the process lifetime.
         logger.error("Failed to load CIK map: %s", e)
-        _cik_map = {}
-    return _cik_map
+        return {}
 
 
 def get_cik_for_ticker(ticker):
@@ -119,24 +144,72 @@ def fetch_filings(ticker, filing_types=None, count=10):
 
     except Exception as e:
         logger.error("Error fetching SEC filings for %s: %s", ticker, e)
-        return {"error": str(e), "filings": []}
+        return {"error": "Unable to fetch SEC filings right now.", "filings": []}
+
+
+def _strip_html(text):
+    """Reduce filing HTML to readable plain text."""
+    text = re.sub(r'(?is)<(script|style)[^>]*>.*?</\1>', ' ', text)
+    text = re.sub(r'(?s)<[^>]+>', ' ', text)
+    text = re.sub(r'&[a-zA-Z#0-9]+;', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _looks_readable(sentence):
+    """Filter out XBRL/header boilerplate that survives HTML stripping."""
+    if 'http://' in sentence or 'https://' in sentence:
+        return False
+    letters = sum(1 for c in sentence if c.isalpha() or c.isspace())
+    if letters / max(len(sentence), 1) < 0.85:
+        return False
+    # Real prose has plenty of ordinary lowercase words.
+    words = sentence.split()
+    lowercase_words = sum(1 for w in words if w.isalpha() and w.islower())
+    return lowercase_words >= max(4, len(words) // 4)
+
+
+def _readable_sentences(text):
+    """Split stripped filing text into prose sentences, dropping XBRL noise."""
+    return [
+        s.strip() for s in re.split(r'(?<=[.!?])\s+', text)
+        if len(s.strip()) > 60 and _looks_readable(s.strip())
+    ]
+
+
+def _extractive_summary(sentences, filing_type, company_name):
+    """Plain-text excerpt summary used when the AI summarizer is unavailable."""
+    excerpt = " ".join(sentences[:8])
+    if not excerpt:
+        return None
+    return (
+        f"AI summary is unavailable right now - showing an excerpt of the {filing_type} "
+        f"for {company_name}:\n\n{excerpt[:2200]}\n\n"
+        "Open the filing on SEC EDGAR for the complete document."
+    )
 
 
 def summarize_filing(filing_url, filing_type, company_name):
-    """Use Groq to generate a readable summary of a filing."""
-    client = _get_client()
-    if not client:
-        return {"summary": "AI summary unavailable (no API key configured)"}
-
+    """Summarize a filing with Groq, falling back to a plain-text excerpt."""
     if not is_allowed_sec_url(filing_url):
         return {"summary": "Invalid filing URL. Only SEC EDGAR filing archive URLs are allowed."}
 
     try:
-        resp = requests.get(filing_url, headers=SEC_EDGAR_HEADERS, timeout=15)
-        resp.raise_for_status()
-        content = resp.text[:8000]
-    except Exception:
+        raw = _fetch_sec_text(filing_url)
+    except Exception as e:
+        logger.warning("Unable to fetch SEC filing content: %s", e)
         return {"summary": "Unable to fetch filing content from SEC."}
+
+    # Inline-XBRL filings open with tens of KB of machine-readable header;
+    # strip markup first, then keep only prose so the summary (AI or
+    # extractive) sees the actual document text.
+    text = _strip_html(raw)
+    sentences = _readable_sentences(text)
+    content = (" ".join(sentences) or text)[:8000]
+
+    client = _get_client()
+    if not client:
+        fallback = _extractive_summary(sentences, filing_type, company_name)
+        return {"summary": fallback or "AI summary unavailable and the filing has no readable text excerpt."}
 
     prompt = f"""Summarize this SEC {filing_type} filing for {company_name}.
 Provide:
@@ -163,14 +236,29 @@ Respond in plain text with clear section headers."""
         return {"summary": response.choices[0].message.content.strip()}
     except Exception as e:
         logger.error("Error summarizing filing: %s", e)
-        return {"summary": f"Error generating summary: {str(e)}"}
+        note_groq_error(e)
+        fallback = _extractive_summary(sentences, filing_type, company_name)
+        return {"summary": fallback or "Unable to generate summary right now."}
+
+
+def _stats_overview(filings, company_name, ticker, filing_summary, date_range):
+    """Deterministic overview built from filing metadata (no AI needed)."""
+    latest = max(filings, key=lambda f: f["filing_date"])
+    return {
+        "overview": (
+            f"{company_name} ({ticker}) has {len(filings)} recent filings on record "
+            f"({filing_summary}) spanning {date_range}. The most recent is a "
+            f"{latest['form']} filed on {latest['filing_date']}. Regular 10-K/10-Q "
+            "cadence indicates routine reporting; clusters of 8-K filings flag "
+            "material events worth a closer look."
+        )
+    }
 
 
 def generate_filings_overview(filings, company_name, ticker):
     """Generate an AI overview paragraph based on the filing list."""
-    client = _get_client()
-    if not client or not filings:
-        return {"overview": "AI overview unavailable."}
+    if not filings:
+        return {"overview": "No filings to analyze."}
 
     type_counts = {}
     for f in filings:
@@ -179,6 +267,10 @@ def generate_filings_overview(filings, company_name, ticker):
     filing_summary = ", ".join(f"{count} {ftype}" for ftype, count in type_counts.items())
     dates = [f["filing_date"] for f in filings]
     date_range = f"{min(dates)} to {max(dates)}" if dates else "N/A"
+
+    client = _get_client()
+    if not client:
+        return _stats_overview(filings, company_name, ticker, filing_summary, date_range)
 
     prompt = f"""Write a concise 2-3 sentence overview of {company_name} ({ticker})'s SEC filing activity.
 They have {len(filings)} recent filings ({filing_summary}) spanning {date_range}.
@@ -198,4 +290,5 @@ Respond with just the overview paragraph, no headers or bullet points."""
         return {"overview": response.choices[0].message.content.strip()}
     except Exception as e:
         logger.error("Error generating filings overview: %s", e)
-        return {"overview": f"Unable to generate overview: {str(e)}"}
+        note_groq_error(e)
+        return _stats_overview(filings, company_name, ticker, filing_summary, date_range)

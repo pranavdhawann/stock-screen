@@ -80,6 +80,30 @@
                             </div>
                         </div>
 
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Backtest MAE</div>
+                                    <div id="forecastMae" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem;"></div>
+                                    <div id="forecastRiskSigma" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Bull Case</div>
+                                    <div id="forecastBullCase" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem; color: var(--positive);"></div>
+                                    <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;">Residual-adjusted upper path</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
+                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Bear Case</div>
+                                    <div id="forecastBearCase" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem; color: var(--negative);"></div>
+                                    <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;">Residual-adjusted lower path</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card mb-3" style="border-radius: 0;">
                             <div class="card-header" style="padding: 10px 16px;">Projected Path</div>
                             <div class="card-body" style="padding: 16px;">
@@ -100,6 +124,8 @@
                                                 <th>Date</th>
                                                 <th>Predicted Close</th>
                                                 <th>Predicted Move</th>
+                                                <th>Band Low</th>
+                                                <th>Band High</th>
                                             </tr>
                                         </thead>
                                         <tbody id="forecastTableBody"></tbody>
@@ -142,11 +168,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
-    const STORAGE_KEY = 'stockscreen.forecasting.freeRunsUsed';
-    const FREE_RUN_LIMIT = 1;
-
     const tickerSelect = document.getElementById('forecastTicker');
     const runButton = document.getElementById('runForecastBtn');
     const usageLabel = document.getElementById('forecastUsageLabel');
@@ -160,35 +183,25 @@
     const asOfEl = document.getElementById('forecastAsOf');
     const nextCloseEl = document.getElementById('forecastNextClose');
     const nextMoveEl = document.getElementById('forecastNextMove');
+    const maeEl = document.getElementById('forecastMae');
+    const riskSigmaEl = document.getElementById('forecastRiskSigma');
+    const bullCaseEl = document.getElementById('forecastBullCase');
+    const bearCaseEl = document.getElementById('forecastBearCase');
     const tableBodyEl = document.getElementById('forecastTableBody');
     const forecastChartCanvas = document.getElementById('forecastChart');
     const gateModal = document.getElementById('forecastGateModal');
     const gateCloseBtn = document.getElementById('forecastGateClose');
     const gateAcknowledgeBtn = document.getElementById('forecastGateAcknowledge');
+    const fetchJson = window.StockScreenUtils.fetchJson;
     let forecastChart = null;
+    let forecastStatus = { limit: 1, remaining: 0, reset_at: null };
 
     function isLocalTesting() {
         return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     }
 
-    function getRunsUsed() {
-        try {
-            return parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
-        } catch (err) {
-            return 0;
-        }
-    }
-
-    function setRunsUsed(value) {
-        try {
-            localStorage.setItem(STORAGE_KEY, String(value));
-        } catch (err) {
-            return;
-        }
-    }
-
     function hasFreeRunRemaining() {
-        return getRunsUsed() < FREE_RUN_LIMIT;
+        return Number(forecastStatus.remaining || 0) > 0;
     }
 
     function updateUsageLabel() {
@@ -196,10 +209,24 @@
             usageLabel.textContent = 'Local testing mode';
             return;
         }
-        const remaining = Math.max(FREE_RUN_LIMIT - getRunsUsed(), 0);
+        const remaining = Math.max(Number(forecastStatus.remaining || 0), 0);
         usageLabel.textContent = remaining > 0
             ? remaining + ' free run remaining'
             : 'Free run used';
+    }
+
+    function refreshForecastStatus() {
+        return fetchJson('/api/forecast/status')
+            .then(function(status) {
+                forecastStatus = status;
+                updateUsageLabel();
+                return status;
+            })
+            .catch(function() {
+                forecastStatus = { limit: 1, remaining: 0, reset_at: null };
+                updateUsageLabel();
+                return forecastStatus;
+            });
     }
 
     function setLoading(isLoading) {
@@ -232,15 +259,39 @@
         return currency + Number(value).toFixed(2);
     }
 
-    function renderForecastChart(data) {
+    function renderForecastChart(data, history) {
         if (!forecastChartCanvas || typeof Chart === 'undefined') {
             return;
         }
 
-        const labels = [data.as_of].concat((data.predictions || []).map(function(item) {
+        // Recent actual closes give the projection context. Drop the final
+        // history point: the forecast series re-anchors at last_close.
+        const histPoints = (history || []).slice(-21, -1);
+        const histLabels = histPoints.map(function(point) {
+            return new Date(point.date).toISOString().slice(0, 10);
+        });
+        const histPad = new Array(histPoints.length).fill(null);
+
+        const labels = histLabels.concat([data.as_of], (data.predictions || []).map(function(item) {
             return item.date;
         }));
-        const values = [data.last_close].concat((data.predictions || []).map(function(item) {
+        const actualSeries = histPoints.map(function(point) {
+            return point.price;
+        }).concat([data.last_close], new Array((data.predictions || []).length).fill(null));
+        const values = histPad.concat([data.last_close], (data.predictions || []).map(function(item) {
+            return item.predicted_close;
+        }));
+        const bands = data.confidence_bands || [];
+        const lowerBand = histPad.concat([data.last_close], bands.map(function(item) {
+            return item.lower;
+        }));
+        const upperBand = histPad.concat([data.last_close], bands.map(function(item) {
+            return item.upper;
+        }));
+        const bullCase = histPad.concat([data.last_close], (data.bull_case || []).map(function(item) {
+            return item.predicted_close;
+        }));
+        const bearCase = histPad.concat([data.last_close], (data.bear_case || []).map(function(item) {
             return item.predicted_close;
         }));
 
@@ -252,19 +303,65 @@
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: data.symbol + ' projected close',
-                    data: values,
-                    borderColor: '#FFA500',
-                    backgroundColor: 'rgba(255, 165, 0, 0.14)',
-                    pointBackgroundColor: '#FFA500',
-                    pointBorderColor: '#0a0a0a',
-                    pointRadius: 4,
-                    pointHoverRadius: 5,
-                    pointBorderWidth: 1.5,
-                    tension: 0.28,
-                    fill: true,
-                }],
+                datasets: [
+                    {
+                        label: 'Recent close',
+                        data: actualSeries,
+                        borderColor: '#00D4FF',
+                        backgroundColor: 'rgba(0, 212, 255, 0.06)',
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                        tension: 0.2,
+                    },
+                    {
+                        label: 'Lower band',
+                        data: lowerBand,
+                        borderColor: 'rgba(255, 165, 0, 0.15)',
+                        backgroundColor: 'rgba(255, 165, 0, 0.12)',
+                        pointRadius: 0,
+                        borderWidth: 0,
+                    },
+                    {
+                        label: 'Confidence band',
+                        data: upperBand,
+                        borderColor: 'rgba(255, 165, 0, 0.15)',
+                        backgroundColor: 'rgba(255, 165, 0, 0.12)',
+                        pointRadius: 0,
+                        borderWidth: 0,
+                        fill: '-1',
+                    },
+                    {
+                        label: 'Bull case',
+                        data: bullCase,
+                        borderColor: '#00FF88',
+                        borderDash: [5, 4],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        tension: 0.22,
+                    },
+                    {
+                        label: 'Bear case',
+                        data: bearCase,
+                        borderColor: '#FF3B3B',
+                        borderDash: [5, 4],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                        tension: 0.22,
+                    },
+                    {
+                        label: data.symbol + ' projected close',
+                        data: values,
+                        borderColor: '#FFA500',
+                        backgroundColor: 'rgba(255, 165, 0, 0.14)',
+                        pointBackgroundColor: '#FFA500',
+                        pointBorderColor: '#0a0a0a',
+                        pointRadius: 4,
+                        pointHoverRadius: 5,
+                        pointBorderWidth: 1.5,
+                        tension: 0.28,
+                        fill: false,
+                    },
+                ],
             },
             options: {
                 responsive: true,
@@ -275,7 +372,14 @@
                 },
                 plugins: {
                     legend: {
-                        display: false,
+                        display: true,
+                        labels: {
+                            color: '#999',
+                            font: { family: 'JetBrains Mono', size: 10 },
+                            filter: function(item) {
+                                return item.text !== 'Lower band';
+                            },
+                        },
                     },
                     tooltip: {
                         backgroundColor: '#0f1117',
@@ -324,56 +428,91 @@
         });
     }
 
-    function renderForecast(data) {
-        const firstPrediction = data.predictions && data.predictions.length ? data.predictions[0] : null;
-        const delta = firstPrediction ? firstPrediction.predicted_close - data.last_close : 0;
+    function renderForecast(data, history) {
+        const predictions = data.predictions || [];
+        const lastPrediction = predictions.length ? predictions[predictions.length - 1] : null;
+        const delta = lastPrediction ? lastPrediction.predicted_close - data.last_close : 0;
+        const totalPct = lastPrediction && data.last_close ? (delta / data.last_close) * 100 : 0;
 
         symbolLineEl.textContent = data.symbol + ' - ' + data.company_name;
         metaLineEl.textContent = data.market + ' market - ' + data.lookback_days + '-day lookback - ' + data.horizon + '-day horizon';
         lastCloseEl.textContent = formatPrice(data.currency, data.last_close);
         asOfEl.textContent = 'As of ' + data.as_of;
-        nextCloseEl.textContent = firstPrediction ? formatPrice(data.currency, firstPrediction.predicted_close) : 'N/A';
-        nextMoveEl.textContent = firstPrediction
-            ? ((delta >= 0 ? '+' : '') + delta.toFixed(2) + ' (' + (firstPrediction.predicted_return_pct >= 0 ? '+' : '') + firstPrediction.predicted_return_pct.toFixed(2) + '%)')
+        nextCloseEl.textContent = lastPrediction ? formatPrice(data.currency, lastPrediction.predicted_close) : 'N/A';
+        nextMoveEl.textContent = lastPrediction
+            ? ((delta >= 0 ? '+' : '') + delta.toFixed(2) + ' (' + (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '% over ' + data.horizon + ' days)')
             : 'No prediction available';
         nextMoveEl.style.color = delta >= 0 ? 'var(--positive)' : 'var(--negative)';
 
-        tableBodyEl.innerHTML = (data.predictions || []).map(function(item) {
+        const lastBull = data.bull_case && data.bull_case.length ? data.bull_case[data.bull_case.length - 1] : null;
+        const lastBear = data.bear_case && data.bear_case.length ? data.bear_case[data.bear_case.length - 1] : null;
+        maeEl.textContent = data.backtest_mae !== undefined ? formatPrice(data.currency, data.backtest_mae) : 'N/A';
+        riskSigmaEl.textContent = data.risk_sigma !== undefined ? 'Residual sigma ' + Number(data.risk_sigma).toFixed(4) : '';
+        bullCaseEl.textContent = lastBull ? formatPrice(data.currency, lastBull.predicted_close) : 'N/A';
+        bearCaseEl.textContent = lastBear ? formatPrice(data.currency, lastBear.predicted_close) : 'N/A';
+
+        tableBodyEl.textContent = '';
+        const bands = data.confidence_bands || [];
+        predictions.forEach(function(item, idx) {
+            const row = document.createElement('tr');
             const moveColor = item.predicted_return_pct >= 0 ? 'var(--positive)' : 'var(--negative)';
-            const moveLabel = (item.predicted_return_pct >= 0 ? '+' : '') + item.predicted_return_pct.toFixed(2) + '%';
-            return `
-                <tr>
-                    <td>Day +${item.step}</td>
-                    <td>${item.date}</td>
-                    <td>${formatPrice(data.currency, item.predicted_close)}</td>
-                    <td style="color: ${moveColor};">${moveLabel}</td>
-                </tr>
-            `;
-        }).join('');
+            const moveLabel = (item.predicted_return_pct >= 0 ? '+' : '') + Number(item.predicted_return_pct).toFixed(2) + '%';
+            const band = bands[idx] || {};
+            [
+                'Day +' + Number(item.step || 0),
+                String(item.date || ''),
+                formatPrice(data.currency, Number(item.predicted_close)),
+                moveLabel,
+                band.lower !== undefined ? formatPrice(data.currency, Number(band.lower)) : '—',
+                band.upper !== undefined ? formatPrice(data.currency, Number(band.upper)) : '—',
+            ].forEach(function(value, index) {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                if (index === 3) {
+                    cell.style.color = moveColor;
+                } else if (index >= 4) {
+                    cell.style.color = 'var(--text-muted)';
+                }
+                row.appendChild(cell);
+            });
+            tableBodyEl.appendChild(row);
+        });
 
         emptyEl.style.display = 'none';
         resultsEl.style.display = '';
-        renderForecastChart(data);
+        renderForecastChart(data, history);
     }
 
     function populateStocks() {
-        fetch('/api/stock_list')
-            .then(function(response) { return response.json(); })
+        fetchJson('/api/stock_list')
             .then(function(data) {
-                const usOptions = (data.US || []).map(function(stock) {
-                    return `<option value="${stock.symbol}">${stock.symbol} - ${stock.name}</option>`;
-                }).join('');
-                const inOptions = (data.IN || []).map(function(stock) {
-                    return `<option value="${stock.symbol}">${stock.symbol} - ${stock.name}</option>`;
-                }).join('');
-                tickerSelect.innerHTML = `
-                    <option value="">Choose a stock</option>
-                    <optgroup label="US Markets">${usOptions}</optgroup>
-                    <optgroup label="India Markets">${inOptions}</optgroup>
-                `;
+                tickerSelect.textContent = '';
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = 'Choose a stock';
+                tickerSelect.appendChild(emptyOption);
+
+                [
+                    ['US Markets', data.US || []],
+                    ['India Markets', data.IN || []],
+                ].forEach(function(group) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = group[0];
+                    group[1].forEach(function(stock) {
+                        const option = document.createElement('option');
+                        option.value = String(stock.symbol || '').replace(/[^A-Za-z0-9.^-]/g, '');
+                        option.textContent = `${stock.symbol || ''} - ${stock.name || ''}`;
+                        optgroup.appendChild(option);
+                    });
+                    tickerSelect.appendChild(optgroup);
+                });
             })
             .catch(function() {
-                tickerSelect.innerHTML = '<option value="">Unable to load stocks</option>';
+                tickerSelect.textContent = '';
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Unable to load stocks';
+                tickerSelect.appendChild(option);
                 setError('Unable to load the stock list right now.');
             });
     }
@@ -393,25 +532,25 @@
         }
 
         setLoading(true);
-        fetch('/api/forecast', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol: symbol }),
-        })
-        .then(function(response) {
-            return response.json().then(function(payload) {
-                if (!response.ok) {
-                    throw new Error(payload.error || 'Forecast generation failed.');
-                }
-                return payload;
-            });
-        })
-        .then(function(data) {
-            if (!isLocalTesting()) {
-                setRunsUsed(getRunsUsed() + 1);
+        const historyPromise = fetchJson('/api/chart_data?symbol=' + encodeURIComponent(symbol) + '&period=30d')
+            .then(function(chart) { return chart.chart_data || []; })
+            .catch(function() { return []; });
+
+        Promise.all([
+            fetchJson('/api/forecast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol: symbol }),
+            }),
+            historyPromise,
+        ])
+        .then(function(results) {
+            const data = results[0];
+            if (data.usage) {
+                forecastStatus = data.usage;
                 updateUsageLabel();
             }
-            renderForecast(data);
+            renderForecast(data, results[1]);
         })
         .catch(function(error) {
             setError(error.message || 'Forecast generation failed.');
@@ -436,6 +575,7 @@
     });
 
     updateUsageLabel();
+    refreshForecastStatus();
     populateStocks();
 })();
 </script>
