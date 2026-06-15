@@ -3,6 +3,7 @@ import logging
 import os
 import secrets
 import threading
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from werkzeug.exceptions import HTTPException
 
@@ -65,13 +66,31 @@ def create_app():
     def _set_csp_nonce():
         g.csp_nonce = secrets.token_urlsafe(16)
 
+    # Umami analytics (privacy-friendly). Set UMAMI_WEBSITE_ID to enable;
+    # UMAMI_SRC defaults to Umami Cloud but can point at a self-hosted instance.
+    app.config['UMAMI_WEBSITE_ID'] = os.environ.get('UMAMI_WEBSITE_ID', '').strip()
+    app.config['UMAMI_SRC'] = os.environ.get(
+        'UMAMI_SRC', 'https://cloud.umami.is/script.js'
+    ).strip()
+    _umami_parsed = urlparse(app.config['UMAMI_SRC'])
+    app.config['UMAMI_ORIGIN'] = (
+        f"{_umami_parsed.scheme}://{_umami_parsed.netloc}"
+        if _umami_parsed.scheme and _umami_parsed.netloc else ''
+    )
+
     @app.context_processor
     def _security_context():
-        return {'csp_nonce': getattr(g, 'csp_nonce', '')}
+        return {
+            'csp_nonce': getattr(g, 'csp_nonce', ''),
+            'umami_website_id': app.config.get('UMAMI_WEBSITE_ID', ''),
+            'umami_src': app.config.get('UMAMI_SRC', ''),
+        }
 
     @app.after_request
     def _set_security_headers(response):
         nonce = getattr(g, 'csp_nonce', '')
+        umami_origin = app.config.get('UMAMI_ORIGIN', '') if app.config.get('UMAMI_WEBSITE_ID') else ''
+        umami_src = f' {umami_origin}' if umami_origin else ''
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         response.headers.setdefault('X-Frame-Options', 'DENY')
@@ -89,11 +108,11 @@ def create_app():
         response.headers.setdefault(
             'Content-Security-Policy',
             "default-src 'self'; "
-            f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com{umami_src}; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             "img-src 'self' data: https:; "
-            "connect-src 'self'; "
+            f"connect-src 'self'{umami_src}; "
             "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         )
         return response

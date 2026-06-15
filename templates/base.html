@@ -153,5 +153,10 @@
     <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
 
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Umami analytics (privacy-friendly, no cookies) -->
+    {% if umami_website_id %}
+    <script defer src="{{ umami_src }}" data-website-id="{{ umami_website_id }}" nonce="{{ csp_nonce }}"></script>
+    {% endif %}
 </body>
 </html>

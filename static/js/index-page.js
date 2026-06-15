@@ -334,7 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderNewsToContainer(newsItems, container) {
         if (!container) return;
 
-        const allItems = Array.isArray(newsItems) ? newsItems : [];
+        // Drop any article whose sentiment resolves to N/A.
+        const allItems = (Array.isArray(newsItems) ? newsItems : [])
+            .filter(item => getDisplaySentiment(item?.sentiment || 'Unknown') !== 'N/A');
         const cutoff = Date.now() - NEWS_LOOKBACK_MS;
         let recentNewsItems = allItems.filter(item => {
             const published = Number(item?.published || 0);
