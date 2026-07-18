@@ -191,19 +191,6 @@ body::after {
     gap: 24px;
 }
 
-.nav-brand a {
-    text-decoration: none;
-    color: var(--text-primary);
-}
-
-.brand-text {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: var(--accent-amber);
-}
-
 .nav-links {
     display: flex;
     align-items: center;
@@ -753,10 +740,6 @@ body::after {
     padding: 20px 0;
 }
 
-.spinner-border {
-    display: none !important;
-}
-
 /* ============================================================
    PROGRESS BAR
    ============================================================ */
@@ -1084,10 +1067,6 @@ body::after {
     color: var(--text-secondary) !important;
 }
 
-.text-white {
-    color: #fff !important;
-}
-
 /* ============================================================
    BOOTSTRAP OVERRIDES — Form controls
    ============================================================ */
@@ -1238,17 +1217,6 @@ body::after {
     font-size: 0.85rem;
 }
 
-.alert-success {
-    background: rgba(0, 255, 136, 0.05) !important;
-    border-color: rgba(0, 255, 136, 0.3) !important;
-    color: var(--text-primary) !important;
-}
-
-.alert-success .alert-heading,
-.alert-success strong {
-    color: var(--positive);
-}
-
 .alert-warning {
     background: rgba(255, 165, 0, 0.05) !important;
     border-color: var(--accent-amber) !important;
@@ -1273,7 +1241,7 @@ body::after {
 }
 
 /* ============================================================
-   BOOTSTRAP OVERRIDES — Card header/footer
+   BOOTSTRAP OVERRIDES — Card header
    ============================================================ */
 .card-header {
     background: var(--bg-primary);
@@ -1283,12 +1251,6 @@ body::after {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-}
-
-.card-footer {
-    background: var(--bg-primary);
-    border-top: 1px solid var(--border);
-    color: var(--text-muted);
 }
 
 /* ============================================================
@@ -1403,10 +1365,6 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.1em;
 }
 
-.modal-footer {
-    border-top: 1px solid var(--border);
-}
-
 .modal-backdrop {
     background: rgba(0, 0, 0, 0.7);
 }
@@ -1421,7 +1379,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================================
-   BOOTSTRAP OVERRIDES — Tooltips & Popovers
+   BOOTSTRAP OVERRIDES — Tooltips
    ============================================================ */
 .tooltip-inner {
     background: var(--bg-panel);
@@ -1432,133 +1390,19 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 0;
 }
 
-.popover {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    border-radius: 0;
-}
-
-/* ============================================================
-   BOOTSTRAP OVERRIDES — Accordion
-   ============================================================ */
-.accordion-item {
-    background: transparent;
-    border: 1px solid var(--border);
-}
-
-.accordion-button {
-    background: var(--bg-panel);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    border-radius: 0;
-}
-
-.accordion-button:not(.collapsed) {
-    background: rgba(255, 165, 0, 0.05);
-    color: var(--accent-amber);
-}
-
-.accordion-body {
-    background: transparent;
-    color: var(--text-secondary);
-}
-
-/* ============================================================
-   BOOTSTRAP OVERRIDES — Nav pills & tabs
-   ============================================================ */
-.nav-pills .nav-link {
-    color: var(--text-secondary);
-    border-radius: 0;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-}
-
-.nav-pills .nav-link.active {
-    background: rgba(255, 165, 0, 0.1);
-    color: var(--accent-amber);
-}
-
-.nav-tabs {
-    border-bottom-color: var(--border);
-}
-
-.nav-tabs .nav-link {
-    color: var(--text-secondary);
-    border-color: transparent;
-    border-radius: 0;
-}
-
-.nav-tabs .nav-link.active {
-    background: transparent;
-    color: var(--accent-amber);
-    border-color: var(--border) var(--border) transparent;
-}
-
-/* ============================================================
-   BOOTSTRAP OVERRIDES — List group
-   ============================================================ */
-.list-group-item {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--text-primary);
-    border-radius: 0;
-}
-
-.list-group-item:hover {
-    background: rgba(255, 165, 0, 0.03);
-}
-
-/* ============================================================
-   BOOTSTRAP OVERRIDES — Breadcrumb
-   ============================================================ */
-.breadcrumb {
-    background: transparent;
-}
-
-.breadcrumb-item a {
-    color: var(--accent-amber);
-}
-
-.breadcrumb-item.active {
-    color: var(--text-muted);
-}
-
-.breadcrumb-item + .breadcrumb-item::before {
-    color: var(--text-muted);
-}
-
 /* ============================================================
    UTILITY OVERRIDES — Backgrounds & borders
    ============================================================ */
-.bg-light {
-    background: var(--bg-panel) !important;
-}
-
 .bg-dark {
     background: var(--bg-primary) !important;
-}
-
-.bg-white {
-    background: var(--bg-panel) !important;
 }
 
 .border {
     border-color: var(--border) !important;
 }
 
-.border-top,
-.border-bottom,
-.border-start,
-.border-end {
+.border-bottom {
     border-color: var(--border) !important;
-}
-
-.shadow,
-.shadow-sm,
-.shadow-lg {
-    box-shadow: none !important;
 }
 
 hr {

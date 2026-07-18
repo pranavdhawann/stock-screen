@@ -5,14 +5,12 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import requests
-from groq import Groq
 
-from app.config import GROQ_API_KEY, GROQ_MODEL, get_stock_metadata
-from app.services.groq_guard import groq_disabled, note_groq_error
+from app.config import GROQ_MODEL, get_stock_metadata
+from app.services.groq_guard import get_client as _get_client, note_groq_error
 
 logger = logging.getLogger(__name__)
 
-_client = None
 _ALLOWED_ARCHIVE_PATHS = {
     "www.bseindia.com": (
         "/xml-data/corpfiling/attachlive/",
@@ -27,15 +25,6 @@ _BSE_HEADERS = {
     "Accept": "application/json,text/plain,*/*",
     "Referer": "https://www.bseindia.com/",
 }
-
-
-def _get_client():
-    global _client
-    if groq_disabled():
-        return None
-    if _client is None and GROQ_API_KEY:
-        _client = Groq(api_key=GROQ_API_KEY)
-    return _client
 
 
 def is_allowed_indian_filing_url(url: str) -> bool:

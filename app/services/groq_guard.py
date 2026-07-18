@@ -13,10 +13,28 @@ import logging
 logger = logging.getLogger(__name__)
 
 _auth_failed = False
+_client = None
 
 
 def groq_disabled() -> bool:
     return _auth_failed
+
+
+def get_client():
+    """Shared lazily-built Groq client, or None when unconfigured/tripped.
+
+    Every AI-consuming service uses this single client instead of building
+    its own copy of the same construction logic.
+    """
+    global _client
+    if _auth_failed:
+        return None
+    if _client is None:
+        from app.config import GROQ_API_KEY
+        if GROQ_API_KEY:
+            from groq import Groq
+            _client = Groq(api_key=GROQ_API_KEY)
+    return _client
 
 
 def note_groq_error(exc) -> bool:

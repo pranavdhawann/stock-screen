@@ -394,7 +394,7 @@
         document.getElementById('secResults').classList.add('d-none');
         document.getElementById('secError').classList.add('d-none');
 
-        fetchJson(`/api/sec_filings?ticker=${ticker}&market=${currentMarket}&types=${types.map(encodeURIComponent).join(',')}&count=15`)
+        fetchJson(`/api/sec_filings?ticker=${encodeURIComponent(ticker)}&market=${currentMarket}&types=${types.map(encodeURIComponent).join(',')}&count=15`)
             .then(data => {
                 document.getElementById('secLoading').classList.add('d-none');
 
@@ -497,7 +497,7 @@
 
         container.querySelectorAll('[data-action="summarize-filing"]').forEach(button => {
             button.addEventListener('click', function() {
-                const filingUrl = decodeURIComponent(this.dataset.filingUrl || '');
+                const filingUrl = this.dataset.filingUrl || '';
                 const filingType = this.dataset.filingType || '';
                 if (!filingUrl) return;
                 summarizeFiling(filingUrl, filingType);

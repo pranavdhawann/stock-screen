@@ -1119,7 +1119,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            showError('An error occurred while analyzing sentiment. Please try again.');
+            // Surface the server's message (e.g. rate-limit details) instead
+            // of a generic one when it exists.
+            showError(error.message || 'An error occurred while analyzing sentiment. Please try again.');
             console.error('Error:', error);
         });
     }
@@ -1507,9 +1509,6 @@ document.addEventListener('DOMContentLoaded', function() {
                      : 'var(--text-muted)';
              return `<span class="badge bg-secondary me-1 mb-1" style="color:${color};">${escapeHtml(kw.text || kw.word || '')}</span>`;
          }).join('') || '<span class="text-muted">No keyword cluster available.</span>';
-
-         // Report copy
-         const report = ins.report_summary || {};
 
          el.innerHTML = `
              <!-- Verdict -->
@@ -2128,7 +2127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 const body = document.getElementById('moversTableBody');
                 if (body) {
-                    body.innerHTML = '<tr><td colspan="8" class="text-center py-3" style="color: var(--text-muted);">QUOTES UNAVAILABLE</td></tr>';
+                    body.innerHTML = '<tr><td colspan="9" class="text-center py-3" style="color: var(--text-muted);">QUOTES UNAVAILABLE</td></tr>';
                 }
             });
     }
