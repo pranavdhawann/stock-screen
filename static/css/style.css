@@ -278,6 +278,25 @@ body::after {
     color: var(--negative);
 }
 
+.nav-auth-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--accent-amber);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 5px 12px;
+    white-space: nowrap;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-auth-btn:hover {
+    border-color: var(--accent-amber);
+}
+
 .nav-hamburger {
     display: none;
     background: none;

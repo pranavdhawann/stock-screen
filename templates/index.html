@@ -97,6 +97,33 @@
                         </div>
                     </div>
 
+                    <!-- My Watchlist (signed-in users) -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="text-uppercase fw-bold mb-0" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
+                                MY WATCHLIST
+                            </h4>
+                            <form id="watchlistAddForm" class="d-flex gap-2" style="display: none;">
+                                <input type="text" id="watchlistAddInput" placeholder="ADD SYMBOL" maxlength="16" autocomplete="off"
+                                       style="background: transparent; border: 1px solid var(--border); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.68rem; padding: 4px 10px; width: 120px; outline: none; text-transform: uppercase;">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-family: var(--font-mono); font-size: 0.68rem;">+</button>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="movers-table" id="watchlistTable">
+                                        <tbody id="watchlistTableBody">
+                                            <tr><td class="text-center py-3" style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem;">
+                                                Sign in to build a watchlist that follows you across devices.
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Market Wire (general finance headlines, server-cached) -->
                     <div class="mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -176,9 +203,14 @@
                                 <h4 id="stockPageTitle" class="text-uppercase fw-bold mb-0" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-amber); letter-spacing: 0.1em;">
                                     STOCK NEWS ANALYSIS
                                 </h4>
-                                <button id="backToMarketsBtn" type="button" class="btn btn-sm btn-outline-secondary" style="font-family: var(--font-mono); font-size: 0.7rem;">
-                                    BACK
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button id="watchSymbolBtn" type="button" class="btn btn-sm btn-outline-secondary" style="font-family: var(--font-mono); font-size: 0.7rem;">
+                                        ☆ WATCH
+                                    </button>
+                                    <button id="backToMarketsBtn" type="button" class="btn btn-sm btn-outline-secondary" style="font-family: var(--font-mono); font-size: 0.7rem;">
+                                        BACK
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Loading Spinner -->
@@ -320,5 +352,6 @@
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/index-page.js') }}"></script>
+<script src="{{ url_for('static', filename='js/watchlist.js') }}"></script>
 {% endblock %}
 

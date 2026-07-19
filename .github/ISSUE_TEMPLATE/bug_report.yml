@@ -1,0 +1,36 @@
+name: 🐛 Bug Report
+description: Something broken? Help us fix it fast.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! A clear report usually gets fixed within days.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what did you see instead?
+      placeholder: "Searched AAPL on the live demo, the sentiment panel showed ... but I expected ..."
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where did it happen?
+      placeholder: "Live demo / local run / Docker — plus browser or OS if relevant"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or logs (optional)
+      description: Browser devtools console errors or Flask logs, if you have them.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true

@@ -1416,9 +1416,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
          // Show results section
          resultsSection.classList.remove('d-none');
-         
+
          // Don't clear search input - keep the stock name visible
          dismissAutocomplete();
+
+         // Notify companion scripts (watchlist.js WATCH button state).
+         window.dispatchEvent(new CustomEvent('analysis:shown', { detail: { symbol: currentSymbol } }));
      }
      
      // Display insights function
@@ -2135,5 +2138,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initTerminalClocks();
     loadTerminalQuotes();
     setInterval(loadTerminalQuotes, QUOTES_REFRESH_MS);
+
+    // Let companion scripts (watchlist.js) open an analysis view.
+    window.StockScreenAnalyze = analyzeSentiment;
 
 });

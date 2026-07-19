@@ -30,6 +30,7 @@ Institutional traders get Bloomberg terminals. Retail investors get twelve brows
 | 🔮 | **LSTM Price Forecasts** | A bundled PyTorch model turns 60 days of OHLCV into a 5-day projection with confidence bands, bull/bear cases, and backtest MAE |
 | 📊 | **Live Terminal UI** | Ticker tape, market movers with sparklines, world clocks, technical overlays (SMA/EMA/Bollinger/RSI/MACD), sentiment-vs-price divergence |
 | 🌏 | **Two Markets** | US (NYSE/Nasdaq) and India (NSE/BSE) with the right currency, indices, and filing sources per market |
+| ⭐ | **Accounts & Watchlists** | Free sign-in (email + password, server-side sessions) with a personal watchlist that follows you across devices — one click to watch any stock from its analysis page |
 
 **[→ Try the live demo](https://stock-screen-25476982226.us-central1.run.app/)** — no signup, no API key needed to browse.
 
@@ -102,6 +103,8 @@ Public-demo budgets, enforced server-side per client:
 | AI buckets | `/api/analyze_sentiment`, `/api/indicators/*`, filing summaries/overviews | 20/hour |
 | `forecast` | `/api/forecast` | 1 per 30 days |
 | `contact` | `/api/contact` | 5/hour |
+| `auth_signup` / `auth_login` | `/api/auth/*` | 5/hour · 10 per 15 min |
+| `watchlist` | `/api/watchlist` mutations | 60/hour |
 
 Source code proves which providers are wired and how they're limited; check each vendor dashboard for the connected account's plan.
 
@@ -153,16 +156,28 @@ Rotate any key that was ever configured as a plain env var before relying on Sec
 
 ---
 
+## Roadmap
+
+- [x] Multi-source news + AI sentiment verdicts
+- [x] SEC EDGAR + BSE/NSE filing intelligence
+- [x] LSTM forecasting with confidence bands
+- [x] Accounts + cross-device watchlists
+- [ ] Watchlist alerts (sentiment flips, volume spikes)
+- [ ] Pro tier — higher forecast quotas and deeper history (waitlist-backed)
+- [ ] More markets and symbols
+
+Have an idea? [Open a feature request](https://github.com/pranavdhawann/stock-screen/issues/new/choose).
+
 ## Contributing
 
-Issues and PRs are welcome — good first contributions:
+Issues and PRs are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, project map, and ground rules, and **[SECURITY.md](SECURITY.md)** for reporting vulnerabilities. Good first contributions:
 
 - 📈 Add symbols to the stock directory (`app/config.py`)
 - 🌐 New news sources (implement a fetcher in `app/services/news_aggregator.py`)
 - 🧪 More regression tests (`tests/`)
 - 🎨 Terminal UI polish (keep it dense, keep it dark)
 
-Run `python -m pytest -q` before submitting; the suite is fast (<5s) and guards the security posture.
+Run `python -m pytest -q` before submitting; the suite is fast and guards the security posture.
 
 ## License
 
