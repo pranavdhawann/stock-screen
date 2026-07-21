@@ -80,6 +80,7 @@
                     <span class="status-dot" id="statusDot" title="Connected"></span>
                     <span class="status-label" id="statusLabel"></span>
                 </div>
+                <button class="nav-auth-btn" id="accountBtn" type="button">SIGN IN</button>
                 <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
                     MENU
                 </button>
@@ -134,6 +135,39 @@
         </div>
     </div>
 
+    <!-- Auth Modal -->
+    <div id="authModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
+        <div style="background:var(--bg-panel,#111); border:1px solid var(--border,#333); width:90%; max-width:400px; padding:0; font-family:var(--font-mono,monospace);">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border,#333);">
+                <span id="authModalTitle" style="font-size:0.75rem; color:var(--accent-amber,#FFA500); text-transform:uppercase; letter-spacing:0.1em;">
+                    SIGN IN
+                </span>
+                <button id="authModalClose" type="button" style="background:none; border:none; color:var(--text-muted,#666); cursor:pointer; font-size:1.1rem; padding:0; line-height:1;">&times;</button>
+            </div>
+            <div style="padding:24px;">
+                <form id="authForm">
+                    <div style="margin-bottom:16px;">
+                        <input type="email" id="authEmail" placeholder="Email" maxlength="254" required autocomplete="email"
+                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <input type="password" id="authPassword" placeholder="Password (8+ characters)" minlength="8" maxlength="128" required autocomplete="current-password"
+                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                    </div>
+                    <button type="submit" id="authSubmitBtn"
+                        style="width:100%; background:var(--accent-amber,#FFA500); color:#000; border:none; font-family:inherit; font-size:0.78rem; font-weight:700; padding:11px; cursor:pointer; letter-spacing:0.05em;">
+                        SIGN IN
+                    </button>
+                </form>
+                <div id="authError" style="display:none; color:var(--negative,#f44336); font-size:0.78rem; text-align:center; padding:10px 0 0;"></div>
+                <div style="text-align:center; margin-top:16px; font-size:0.72rem; color:var(--text-muted,#666);">
+                    <span id="authTogglePrompt">No account yet?</span>
+                    <button id="authToggleMode" type="button" style="background:none; border:none; color:var(--accent-cyan,#00D4FF); cursor:pointer; font-family:inherit; font-size:inherit; padding:0; margin-left:4px;">Create one</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="main-content">
         {% block content %}{% endblock %}
@@ -151,6 +185,7 @@
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/account.js') }}"></script>
 
     {% block extra_scripts %}{% endblock %}
 

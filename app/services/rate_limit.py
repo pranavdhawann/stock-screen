@@ -114,6 +114,10 @@ def check_limit(
 
         reset_at = events[0] + timedelta(seconds=window_seconds) if events else now + timedelta(seconds=window_seconds)
         remaining = max(0, limit - len(events))
+        if not events:
+            # Drop empty entries so the map doesn't grow forever with one
+            # deque per client IP that ever made a request.
+            del _events[event_key]
         return RateLimitResult(allowed=allowed, remaining=remaining, reset_at=reset_at)
 
 

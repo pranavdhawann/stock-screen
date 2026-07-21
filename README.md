@@ -1,124 +1,148 @@
-# Stock Screen — AI-Powered Stock Sentiment & Market Intelligence
+<div align="center">
 
-**Real-time stock analysis, news sentiment scoring, SEC filing intelligence, and AI forecasting — all in one terminal-style dashboard.**
+# 📈 Stock Screen
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-stock--screen-FFD700?style=for-the-badge&logo=google-cloud&logoColor=white)](https://stock-screen-25476982226.us-central1.run.app/)
+**A free, open-source Bloomberg-style terminal for stock sentiment, news, SEC filings, and AI forecasting.**
+
+Type a ticker. Get a verdict — bullish/bearish signal, catalysts, risks, filing summaries, and an LSTM price forecast — in seconds.
+
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-stock--screen-FFD700?style=for-the-badge)](https://stock-screen-25476982226.us-central1.run.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-Production-000000?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.x-000000?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com)
+[![Supabase](https://img.shields.io/badge/Supabase-cache_+_quotas-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+
+*If Stock Screen saves you a research session, consider giving it a ⭐ — it helps others find the project.*
+
+</div>
 
 ---
 
-## Features
+## Why Stock Screen?
 
-### Market Sentiment Analysis
-Analyze any US or Indian stock with AI-powered sentiment scoring. Aggregates news from multiple sources, scores each article, and produces an overall bullish/bearish/neutral verdict with confidence levels.
+Institutional traders get Bloomberg terminals. Retail investors get twelve browser tabs. Stock Screen closes that gap with a single dark-terminal dashboard that does the reading for you:
 
-### Multi-Source News Aggregation
-Pulls financial news from Google RSS, MarketWatch, Finnhub, and Currents API. Deduplicates, ranks by relevance, and presents a unified news feed per ticker.
+| | Feature | What you get |
+|---|---|---|
+| 🧠 | **AI Sentiment Verdicts** | Every headline scored by an LLM (Groq Llama 3.3 70B), rolled up into a bullish/bearish/neutral signal with confidence, catalysts, and risks — with a finance-lexicon fallback so the app never goes blank |
+| 📰 | **Multi-Source News Wire** | Yahoo Finance, Google News RSS, MarketWatch, Finnhub, NewsAPI, Alpha Vantage, and Currents — deduplicated, relevance-ranked, merged into one feed |
+| 🏛️ | **Filing Intelligence** | SEC EDGAR (10-K / 10-Q / 8-K) **and** Indian BSE/NSE disclosures, with AI summaries, filing timelines, and cadence stats |
+| 🔮 | **LSTM Price Forecasts** | A bundled PyTorch model turns 60 days of OHLCV into a 5-day projection with confidence bands, bull/bear cases, and backtest MAE |
+| 📊 | **Live Terminal UI** | Ticker tape, market movers with sparklines, world clocks, technical overlays (SMA/EMA/Bollinger/RSI/MACD), sentiment-vs-price divergence |
+| 🌏 | **Two Markets** | US (NYSE/Nasdaq) and India (NSE/BSE) with the right currency, indices, and filing sources per market |
+| ⭐ | **Accounts & Watchlists** | Free sign-in (email + password, server-side sessions) with a personal watchlist that follows you across devices — one click to watch any stock from its analysis page |
 
-### SEC Filing Intelligence
-Search and summarize SEC EDGAR filings (10-K, 10-Q, 8-K) using large language models. Get AI-generated overviews of a company's latest regulatory disclosures.
-
-### Interactive Charts
-Price charts with 30-day, 1-year, and 5-year views. Sentiment trend overlays. Powered by Chart.js.
-
-### AI Forecasting Engine
-Short-horizon LSTM forecasts from recent OHLCV history, with server-side usage controls for the public demo.
-
----
-
-## Project Structure
-
-```
-app/             - Flask routes, services, and config
-lstm/            - Forecasting model and inference helpers
-static/          - CSS, JavaScript (client-side)
-templates/       - Jinja2 HTML templates
-tests/           - Regression and security tests
-wsgi.py          - Production WSGI entrypoint
-Dockerfile       - Production container config
-requirements.txt - Production Python dependencies
-requirements-dev.txt - Local test dependencies
-.env.example     - Environment variable template
-```
+**[→ Try the live demo](https://stock-screen-25476982226.us-central1.run.app/)** — no signup, no API key needed to browse.
 
 ---
 
-## Local Development
+## Quickstart
 
-```powershell
+```bash
+git clone https://github.com/pranavdhawann/stock-screen.git
+cd stock-screen
+
 python -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1
-python -m pip install -r requirements-dev.txt
-Copy-Item .env.example .env
-python -m flask --app app:create_app run
+source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
+
+pip install -r requirements-dev.txt
+cp .env.example .env             # Windows: Copy-Item .env.example .env
+
+flask --app app:create_app run
 ```
 
-Required runtime values are documented in `.env.example`. `GROQ_API_KEY` enables AI summaries and sentiment analysis. `SECRET_KEY` should be set for any deployed environment. `SEC_EDGAR_USER_AGENT` must identify the app/contact for SEC EDGAR requests. Set `TRUST_PROXY_HEADERS=true` only when the app is deployed behind a trusted proxy that controls `X-Forwarded-For`. `MAX_CONTENT_LENGTH` defaults to 1 MiB to reject oversized API bodies.
+Open http://127.0.0.1:5000 — market data and news work out of the box with **zero API keys** (Yahoo Finance + free RSS feeds). Add keys as you need more:
 
-## Supabase
+| Env var | Unlocks | Required? |
+|---|---|---|
+| `GROQ_API_KEY` | AI sentiment, insights, filing summaries | Recommended (free tier works) |
+| `SECRET_KEY` | Session security | Required in production |
+| `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` | Persistent cache + durable rate limits | Optional (falls back to in-memory) |
+| `FINNHUB_API_KEY`, `NEWSAPI_KEY`, `ALPHAVANTAGE_API_KEY`, `CURRENTS_API_KEY` | Extra news sources | Optional |
+| `EMAILJS_SERVICE_ID` / `_TEMPLATE_ID` / `_PUBLIC_KEY` | Contact form delivery | Optional |
+| `SEC_EDGAR_USER_AGENT` | Identifies you to SEC EDGAR (their policy) | Recommended |
 
-Supabase is used only from the Flask backend through `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`. Do not expose the service key to browser code. If Supabase is not configured, cache lookups fall back to in-memory `cachetools` caches.
+All variables are documented in [`.env.example`](.env.example). `TRUST_PROXY_HEADERS=true` only behind a trusted proxy; `MAX_CONTENT_LENGTH` (default 1 MiB) caps request bodies.
 
-The connected `infoedge` project stores persistent cache tables in `public`. RLS is enabled with server-role-only policies, anon/authenticated table grants are revoked, and the app accesses those tables only from backend routes. Expired cache rows can be pruned with `public.cleanup_expired_cache()`.
+---
 
-## API Providers and Rate Limits
+## How It Works
 
-Provider usage is backend-owned unless noted otherwise:
+```mermaid
+flowchart LR
+    UI[Terminal UI<br/>Chart.js + vanilla JS] -->|/api/*| Flask[Flask API]
+    Flask --> Cache{Hybrid cache<br/>memory → Supabase}
+    Cache -->|miss| Yahoo[Yahoo Finance<br/>OHLCV + quotes]
+    Cache -->|miss| News[News sources<br/>RSS + APIs]
+    Cache -->|miss| EDGAR[SEC EDGAR / BSE]
+    Flask --> Groq[Groq LLM<br/>sentiment + summaries]
+    Flask --> LSTM[PyTorch LSTM<br/>bundled checkpoint]
+    Flask --> RL[(Supabase RPC<br/>durable rate limits)]
+```
 
-| Provider | Used for | App bucket |
-| --- | --- | --- |
-| Yahoo Finance chart API | OHLCV, stock charts, LSTM forecast inputs | No explicit app bucket on market/chart endpoints |
-| Google News RSS + MarketWatch RSS | Free public news aggregation | `public_news`: 60/hour per client |
-| Finnhub | Optional ticker-specific company news | `public_news`: 60/hour per client |
-| Currents API | Optional market headlines | `public_news`: 60/hour per client |
-| NewsAPI + Alpha Vantage | Optional multi-source news enrichment | Called through sentiment/news aggregation flows |
-| Groq | Sentiment analysis, AI insights, filing summaries | `analyze_sentiment`, `filing_summary`, `filings_overview`: 20/hour per client |
-| EmailJS | Contact form delivery | `contact`: 5/hour per client |
-| Supabase | Persistent cache and rate-limit RPC | Server-side only via service key |
+- **Hybrid caching** — reads hit an in-memory TTL cache first, then Supabase, then the network. Writes persist to Supabase on a background worker so requests never wait. Without Supabase credentials everything degrades gracefully to memory-only.
+- **Durable quotas** — expensive endpoints (AI analysis, forecasts, contact) are rate-limited through a Postgres RPC with advisory locks, so limits survive restarts and hold across instances. A pg_cron job prunes expired cache and quota rows hourly.
+- **Graceful degradation** — no Groq key (or a tripped key) falls back to a finance-tuned lexicon analyzer and extractive summaries via a process-wide circuit breaker.
+- **Hardened by default** — CSP with per-request nonces, SRI-pinned CDNs, strict security headers, SSRF-safe filing-URL allowlists, honeypot contact form, and a 1200-line regression/security test suite.
 
-Forecasting uses the bundled local LSTM checkpoint and is limited to `forecast`: 1 run per 30 days per client. Source code can prove which providers are wired and how the app rate-limits them, but it cannot prove whether the connected vendor accounts are on free, paid, trial, or overage-enabled plans; verify that in each provider dashboard.
+```
+app/             Flask routes, services, config
+lstm/            PyTorch forecaster + feature engineering (+ training CLI in cli_legacy/)
+static/, templates/  Terminal UI (vanilla JS + Chart.js, no build step)
+supabase/migrations/ Schema, RLS policies, rate-limit RPC, cron cleanup
+tests/           Regression + security suite (pytest)
+```
+
+## API Rate Limits
+
+Public-demo budgets, enforced server-side per client:
+
+| Bucket | Endpoints | Limit |
+|---|---|---|
+| `public_news` | `/api/news`, `/api/currents_news`, `/api/finnhub_news` | 60/hour |
+| AI buckets | `/api/analyze_sentiment`, `/api/indicators/*`, filing summaries/overviews | 20/hour |
+| `forecast` | `/api/forecast` | 1 per 30 days |
+| `contact` | `/api/contact` | 5/hour |
+| `auth_signup` / `auth_login` | `/api/auth/*` | 5/hour · 10 per 15 min |
+| `watchlist` | `/api/watchlist` mutations | 60/hour |
+
+Source code proves which providers are wired and how they're limited; check each vendor dashboard for the connected account's plan.
 
 ## Tests
 
-```powershell
-python -m pytest -q
+```bash
+python -m pytest -q          # 80 regression + security tests
 python -m compileall app lstm
 ```
 
-The regression suite covers startup/import safety, server-side forecast quota enforcement, frontend DOM/fetch hardening, cache cleanup contracts, and LSTM checkpoint loading safeguards.
+The suite covers startup safety, server-side quota enforcement, XSS/SSRF hardening, cache cleanup contracts, Supabase migration invariants, and LSTM checkpoint loading safeguards.
 
-## Production
+---
 
-The container starts Gunicorn from `wsgi:app` and copies both `app/` and `lstm/` so the forecast endpoint can load the bundled model artifact. Production startup fails if `SECRET_KEY` is missing.
+## Deployment
 
-```powershell
-docker build -t infoedge .
-docker run --env-file .env -p 8080:8080 infoedge
+### Docker
+
+```bash
+docker build -t stock-screen .
+docker run --env-file .env -p 8080:8080 stock-screen
 ```
+
+The container runs Gunicorn as a non-root user and fails fast if `SECRET_KEY` is missing in production.
 
 ### GCP Cloud Run Release Contract
 
-The live deployment is GCP Cloud Run. Do not deploy secret values as plain environment variables. Store `SECRET_KEY`, `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `FINNHUB_API_KEY`, `CURRENTS_API_KEY`, and other provider keys in Secret Manager, then wire them with `--set-secrets` or `--update-secrets`.
+The live deployment is GCP Cloud Run (deployed automatically from `main` via GitHub Actions with keyless WIF auth). Do not deploy secret values as plain environment variables — store `SECRET_KEY`, `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and other provider keys in Secret Manager and wire them with `--set-secrets` or `--update-secrets`.
 
-Use a dedicated runtime service account instead of the default Compute Engine service account, and grant it only `roles/secretmanager.secretAccessor` for the secrets this service reads.
-
-Before the next production deploy, enable Secret Manager, create new secret versions, rotate any provider keys that were previously configured as plain Cloud Run environment variables, and then deploy only Secret Manager references.
+Use a dedicated runtime service account with only `roles/secretmanager.secretAccessor` on the secrets this service reads:
 
 ```powershell
 gcloud services enable secretmanager.googleapis.com
-gcloud iam service-accounts create infoedge-runner --display-name "Infoedge Cloud Run runtime"
+gcloud iam service-accounts create infoedge-runner --display-name "Stock Screen Cloud Run runtime"
 gcloud secrets add-iam-policy-binding infoedge-secret-key `
   --member serviceAccount:infoedge-runner@PROJECT_ID.iam.gserviceaccount.com `
   --role roles/secretmanager.secretAccessor
-```
 
-Repeat the per-secret IAM binding for each secret wired to the service.
-
-Example shape, with secret names adjusted to the GCP project:
-
-```powershell
 gcloud run deploy stock-screen `
   --region us-central1 `
   --source . `
@@ -128,32 +152,45 @@ gcloud run deploy stock-screen `
   --allow-unauthenticated
 ```
 
-Post-deploy checks:
-
-```powershell
-python -m pytest -q
-python -m compileall app lstm
-node --check static\js\index-page.js
-node --check static\js\main.js
-node --check static\js\contact.js
-curl.exe -sS -D - -o NUL https://stock-screen-25476982226.us-central1.run.app/ |
-  Select-String -Pattern "content-security-policy:|strict-transport-security:|permissions-policy:|x-frame-options:|x-content-type-options:|referrer-policy:" -CaseSensitive:$false
-```
-
-For stronger public protection, place Cloud Run behind an external HTTPS load balancer with Cloud Armor and set service ingress to `internal-and-cloud-load-balancing`, so traffic reaches the app through the protected load balancer path rather than directly through the `run.app` URL.
+Rotate any key that was ever configured as a plain env var before relying on Secret Manager references. For stronger public protection, front Cloud Run with an HTTPS load balancer + Cloud Armor and set ingress to `internal-and-cloud-load-balancing`.
 
 ---
+
+## Roadmap
+
+- [x] Multi-source news + AI sentiment verdicts
+- [x] SEC EDGAR + BSE/NSE filing intelligence
+- [x] LSTM forecasting with confidence bands
+- [x] Accounts + cross-device watchlists
+- [ ] Watchlist alerts (sentiment flips, volume spikes)
+- [ ] Pro tier — higher forecast quotas and deeper history (waitlist-backed)
+- [ ] More markets and symbols
+
+Have an idea? [Open a feature request](https://github.com/pranavdhawann/stock-screen/issues/new/choose).
+
+## Contributing
+
+Issues and PRs are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, project map, and ground rules, and **[SECURITY.md](SECURITY.md)** for reporting vulnerabilities. Good first contributions:
+
+- 📈 Add symbols to the stock directory (`app/config.py`)
+- 🌐 New news sources (implement a fetcher in `app/services/news_aggregator.py`)
+- 🧪 More regression tests (`tests/`)
+- 🎨 Terminal UI polish (keep it dense, keep it dark)
+
+Run `python -m pytest -q` before submitting; the suite is fast and guards the security posture.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
 
-**Disclaimer:** Stock Screen is for informational and educational purposes only. It is not financial advice. Always do your own research before making investment decisions.
+**Disclaimer:** Stock Screen is for informational and educational purposes only. It is not financial advice. Markets are risky; models are wrong; do your own research.
 
 ---
 
-<p align="center">
-  <a href="https://stock-screen-25476982226.us-central1.run.app/">
-    <strong>Try the Live Demo</strong>
-  </a>
-</p>
+<div align="center">
+  <a href="https://stock-screen-25476982226.us-central1.run.app/"><strong>▶ Try the Live Demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/pranavdhawann/stock-screen/issues">Report a bug</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/pranavdhawann/stock-screen/issues">Request a feature</a>
+</div>

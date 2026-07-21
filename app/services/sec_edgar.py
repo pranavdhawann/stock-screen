@@ -2,25 +2,14 @@ import re
 import requests
 import logging
 from urllib.parse import urlparse
-from groq import Groq
-from app.config import SEC_EDGAR_HEADERS, GROQ_API_KEY, GROQ_MODEL
+from app.config import SEC_EDGAR_HEADERS, GROQ_MODEL
 from app.services.cache import sec_filings_cache, get_cached, set_cached
-from app.services.groq_guard import groq_disabled, note_groq_error
+from app.services.groq_guard import get_client as _get_client, note_groq_error
 
 logger = logging.getLogger(__name__)
 
-_client = None
 _cik_map = None
 _SEC_ALLOWED_HOSTS = {"sec.gov", "www.sec.gov"}
-
-
-def _get_client():
-    global _client
-    if groq_disabled():
-        return None
-    if _client is None and GROQ_API_KEY:
-        _client = Groq(api_key=GROQ_API_KEY)
-    return _client
 
 
 def is_allowed_sec_url(url):

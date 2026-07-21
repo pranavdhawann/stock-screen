@@ -2,14 +2,11 @@ import hashlib
 import json
 import logging
 import re
-from groq import Groq
-from app.config import GROQ_API_KEY, GROQ_MODEL
+from app.config import GROQ_MODEL
 from app.services.cache import sentiment_cache, get_cached, set_cached
-from app.services.groq_guard import groq_disabled, note_groq_error
+from app.services.groq_guard import get_client as _get_client, note_groq_error
 
 logger = logging.getLogger(__name__)
-
-_client = None
 
 # Finance-tuned lexicon used when Groq is unavailable. Shared shape with
 # the keyword extractor in insights.py but tuned for headline scoring.
@@ -36,15 +33,6 @@ NEGATIVE_WORDS = frozenset({
     'lawsuit', 'probe', 'investigation', 'recall', 'fraud', 'sink', 'sinks',
     'tumble', 'tumbles', 'selloff', 'sell-off', 'low', 'lower', 'short',
 })
-
-
-def _get_client():
-    global _client
-    if groq_disabled():
-        return None
-    if _client is None and GROQ_API_KEY:
-        _client = Groq(api_key=GROQ_API_KEY)
-    return _client
 
 
 def lexicon_sentiment(text):

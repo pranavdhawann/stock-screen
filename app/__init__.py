@@ -1,3 +1,4 @@
+from datetime import timedelta
 from flask import Flask, g, jsonify, request
 import logging
 import os
@@ -57,6 +58,12 @@ def create_app():
     if not secret_key and _is_production_env():
         raise RuntimeError('SECRET_KEY must be configured for production deployments.')
     app.config['SECRET_KEY'] = secret_key or secrets.token_hex(32)
+
+    # Session cookie hardening for account sign-in.
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = _is_production_env()
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
     # Configure logging
     log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
@@ -131,9 +138,11 @@ def create_app():
 
     from app.routes.main import main_bp
     from app.routes.api import api_bp
+    from app.routes.account import account_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(account_bp)
 
     _start_cache_warmup()
 

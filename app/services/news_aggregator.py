@@ -4,18 +4,15 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from defusedxml import ElementTree as ET
 from email.utils import parsedate_to_datetime
-from groq import Groq
 from app.config import (
     NEWSAPI_KEY, FINNHUB_API_KEY, ALPHAVANTAGE_API_KEY,
-    GROQ_API_KEY, GROQ_MODEL,
+    GROQ_MODEL,
 )
 from app.services.cache import aggregated_news_cache, get_cached, set_cached
-from app.services.groq_guard import groq_disabled, note_groq_error
+from app.services.groq_guard import get_client as _get_groq_client, note_groq_error
 from app.services.news import fetch_news as fetch_yahoo_news
 
 logger = logging.getLogger(__name__)
-
-_groq_client = None
 
 
 def _safe_error_label(exc):
@@ -24,15 +21,6 @@ def _safe_error_label(exc):
     if status_code:
         return f"{type(exc).__name__} status={status_code}"
     return type(exc).__name__
-
-
-def _get_groq_client():
-    global _groq_client
-    if groq_disabled():
-        return None
-    if _groq_client is None and GROQ_API_KEY:
-        _groq_client = Groq(api_key=GROQ_API_KEY)
-    return _groq_client
 
 
 def fetch_from_newsapi(symbol, company_name):

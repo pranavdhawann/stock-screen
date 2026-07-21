@@ -197,6 +197,105 @@ def get_sentiment_history(symbol: str, days: int = 30) -> list:
         return []
 
 
+def get_user_by_email(email: str):
+    """Fetch an account row by (lowercased) email, or None."""
+    client = _get_client()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("app_users")
+            .select("id,email,password_hash")
+            .eq("email", email.strip().lower())
+            .maybe_single()
+            .execute()
+        )
+        return getattr(result, "data", None) or None
+    except Exception as exc:
+        logger.warning("User lookup failed: %s", exc)
+        return None
+
+
+def create_user(email: str, password_hash: str):
+    """Insert a new account; returns the created row or None (e.g. duplicate)."""
+    client = _get_client()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("app_users")
+            .insert({"email": email.strip().lower(), "password_hash": password_hash})
+            .execute()
+        )
+        rows = getattr(result, "data", None) or []
+        return rows[0] if rows else None
+    except Exception as exc:
+        logger.warning("User creation failed: %s", exc)
+        return None
+
+
+def touch_user_login(user_id: str) -> None:
+    client = _get_client()
+    if not client:
+        return
+    try:
+        client.table("app_users").update({"last_login_at": _iso(_utc_now())}).eq("id", user_id).execute()
+    except Exception as exc:
+        logger.warning("Login timestamp update failed: %s", exc)
+
+
+def get_watchlist(user_id: str) -> list:
+    """Watchlist symbols for a user, oldest first."""
+    client = _get_client()
+    if not client:
+        return []
+    try:
+        result = (
+            client.table("watchlist_items")
+            .select("symbol,added_at")
+            .eq("user_id", user_id)
+            .order("added_at")
+            .execute()
+        )
+        return getattr(result, "data", None) or []
+    except Exception as exc:
+        logger.warning("Watchlist read failed: %s", exc)
+        return []
+
+
+def add_watchlist_symbol(user_id: str, symbol: str) -> bool:
+    client = _get_client()
+    if not client:
+        return False
+    try:
+        client.table("watchlist_items").upsert(
+            {"user_id": user_id, "symbol": symbol.upper()},
+            on_conflict="user_id,symbol",
+        ).execute()
+        return True
+    except Exception as exc:
+        logger.warning("Watchlist add failed: %s", exc)
+        return False
+
+
+def remove_watchlist_symbol(user_id: str, symbol: str) -> bool:
+    client = _get_client()
+    if not client:
+        return False
+    try:
+        (
+            client.table("watchlist_items")
+            .delete()
+            .eq("user_id", user_id)
+            .eq("symbol", symbol.upper())
+            .execute()
+        )
+        return True
+    except Exception as exc:
+        logger.warning("Watchlist remove failed: %s", exc)
+        return False
+
+
 def consume_rate_limit(*, bucket: str, key: str, limit: int, window_seconds: int, consume: bool = True):
     client = _get_client()
     if not client:
