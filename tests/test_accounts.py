@@ -19,9 +19,14 @@ class FakeStore:
         return self.users.get(email.strip().lower())
 
     def create_user(self, email, password_hash):
+        from app.services.supabase_client import DuplicateEmailError
+
         email = email.strip().lower()
         if email in self.users:
-            return None
+            # Mirrors the real client: the unique constraint raises rather
+            # than returning None, so a duplicate is distinguishable from
+            # a generic write failure.
+            raise DuplicateEmailError(email)
         user = {"id": f"user-{self.next_id}", "email": email, "password_hash": password_hash}
         self.next_id += 1
         self.users[email] = user
@@ -167,3 +172,41 @@ def test_accounts_return_503_when_supabase_missing(monkeypatch):
     response = _signup(client)
     assert response.status_code == 503
     assert "unavailable" in response.get_json()["error"].lower()
+
+
+def test_signup_relies_on_unique_constraint_not_a_prior_select(client_and_store, monkeypatch):
+    """A check-then-insert races: two concurrent signups for the same email
+    can both pass the SELECT, and the one that loses the insert used to get
+    an opaque 502. Signup must instead let the unique constraint decide.
+    """
+    client, store = client_and_store
+
+    selects = []
+    original_lookup = store.get_user_by_email
+
+    def spy_lookup(email):
+        selects.append(email)
+        return original_lookup(email)
+
+    monkeypatch.setattr(store, "get_user_by_email", spy_lookup)
+
+    assert _signup(client).status_code == 200
+    # The happy path must not pay for a pre-flight existence lookup.
+    assert selects == []
+
+    # A racing duplicate surfaces as 409, not 502.
+    duplicate = _signup(client)
+    assert duplicate.status_code == 409
+    assert "already exists" in duplicate.get_json()["error"]
+
+
+def test_create_user_maps_unique_violation_to_duplicate_email_error():
+    from app.services.supabase_client import DuplicateEmailError, _is_unique_violation
+
+    class PgError(Exception):
+        code = "23505"
+
+    assert _is_unique_violation(PgError("duplicate key value violates unique constraint")) is True
+    assert _is_unique_violation(Exception('duplicate key value violates unique constraint "app_users_email_key"')) is True
+    assert _is_unique_violation(Exception("connection reset by peer")) is False
+    assert issubclass(DuplicateEmailError, Exception)

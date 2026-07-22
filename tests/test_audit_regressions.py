@@ -113,9 +113,16 @@ def test_no_client_only_forecast_gate_without_server_status():
 
 
 def test_templates_do_not_interpolate_unescaped_attribute_values():
-    sec = read("templates/sec_filings.html")
+    # The filings page script now lives in static/js/sec-filings-page.js
+    # rather than inline in the template, so assert against the file that
+    # actually builds the filing cards.
+    sec = read("static/js/sec-filings-page.js")
+    sec_template = read("templates/sec_filings.html")
     assert 'data-filing-type="${safeForm}"' not in sec
+    assert 'data-filing-type="${safeForm}"' not in sec_template
     assert "document.createElement('button')" in sec
+    # The template must carry no inline script block at all.
+    assert "<script nonce=" not in sec_template
 
     forecasting = read("templates/forecasting.html")
     assert 'value="${stock.symbol}"' not in forecasting

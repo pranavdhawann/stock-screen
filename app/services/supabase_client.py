@@ -216,8 +216,35 @@ def get_user_by_email(email: str):
         return None
 
 
+class DuplicateEmailError(Exception):
+    """The app_users.email unique constraint rejected the insert.
+
+    Signup relies on the database constraint rather than a prior SELECT:
+    a check-then-insert races two concurrent signups for the same address,
+    and the loser surfaced as an opaque 502 instead of "already taken".
+    """
+
+
+def _is_unique_violation(exc) -> bool:
+    """True when an insert failed on a uniqueness constraint.
+
+    postgrest surfaces the Postgres SQLSTATE either as a `code` attribute
+    or embedded in the message, so check both.
+    """
+    code = getattr(exc, "code", None)
+    if str(code) == "23505":
+        return True
+    text = str(exc).lower()
+    return "23505" in text or "duplicate key" in text
+
+
 def create_user(email: str, password_hash: str):
-    """Insert a new account; returns the created row or None (e.g. duplicate)."""
+    """Insert a new account.
+
+    Returns the created row, or None if the write failed for any reason
+    other than a duplicate email. Raises DuplicateEmailError when the
+    address is already registered.
+    """
     client = _get_client()
     if not client:
         return None
@@ -230,6 +257,8 @@ def create_user(email: str, password_hash: str):
         rows = getattr(result, "data", None) or []
         return rows[0] if rows else None
     except Exception as exc:
+        if _is_unique_violation(exc):
+            raise DuplicateEmailError(email) from exc
         logger.warning("User creation failed: %s", exc)
         return None
 

@@ -1,21 +1,22 @@
-import re
 from flask import Blueprint, request, jsonify
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from threading import Thread
 from app.config import (
     STOCK_DIRECTORY, INDIAN_STOCKS, MARKET_INDICES,
     get_company_name, get_currency, is_indian_stock,
     CURRENTS_API_KEY,
     EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
-    TRUST_PROXY_HEADERS,
 )
 from app.services import (
     bse_filings, stock_data, news, sentiment, insights, sec_edgar,
-    news_aggregator, forecasting, indicators,
+    news_aggregator, forecasting, indicators, validation,
 )
-from app.services.rate_limit import check_limit, status as rate_limit_status
+from app.services.http_limits import (
+    client_key as _client_key,
+    consume_limit as _consume_limit,
+)
+from app.services.rate_limit import status as rate_limit_status
 import requests as http_requests
 import logging
 
@@ -35,49 +36,25 @@ CONTACT_MESSAGE_MAX_LENGTH = 3000
 PUBLIC_NEWS_LIMIT = 60
 PUBLIC_NEWS_WINDOW_SECONDS = 60 * 60
 
-_SUPPORTED_SYMBOLS = {stock["symbol"].upper() for stock in STOCK_DIRECTORY}
-_SUPPORTED_MARKET_SYMBOLS = {
-    market["symbol"].upper()
-    for markets in MARKET_INDICES.values()
-    for market in markets
-}
-_SYMBOL_RE = re.compile(r"^[A-Z0-9.^-]{1,16}$")
-_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 _VALID_MARKETS = {"US", "IN"}
 _SEC_FILING_TYPES = ("10-K", "10-Q", "8-K")
 _INDIAN_FILING_TYPES = ("Annual Report", "Financial Results", "Corporate Announcement", "Shareholding Pattern")
 _MAX_OVERVIEW_FILINGS = 25
 
-
-def _client_key():
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if TRUST_PROXY_HEADERS and forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.remote_addr or "unknown"
-
-
-def _rate_limit_payload(result):
-    return {
-        "error": "Rate limit exceeded. Please try again later.",
-        "remaining": result.remaining,
-        "reset_at": result.reset_at.isoformat(),
-    }
-
-
-def _consume_limit(bucket, limit, window_seconds, *, distributed=True):
-    result = check_limit(bucket, _client_key(), limit, window_seconds, distributed=distributed)
-    if not result.allowed:
-        return jsonify(_rate_limit_payload(result)), 429
-    return None
+# Bounded background worker for sentiment-history writes so a burst of
+# requests can't spawn an unbounded number of raw threads (mirrors the
+# cache-persist pool in app/services/cache.py).
+_SENTIMENT_PERSIST_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="sentiment-persist")
 
 
 def _is_supported_symbol(symbol, *, include_market_indices=False):
-    normalized = str(symbol or "").strip().upper()
-    if not _SYMBOL_RE.fullmatch(normalized):
-        return False
-    if normalized in _SUPPORTED_SYMBOLS:
-        return True
-    return include_market_indices and normalized in _SUPPORTED_MARKET_SYMBOLS
+    """Thin wrapper kept for in-module call sites and backward compatibility.
+
+    The real implementation lives in app.services.validation, shared with
+    app.routes.account so neither blueprint reaches into the other's
+    private helpers.
+    """
+    return validation.is_supported_symbol(symbol, include_market_indices=include_market_indices)
 
 
 def _generic_error(message="Request failed. Please try again."):
@@ -98,7 +75,8 @@ def _symbol_text(value):
 
 
 def _is_valid_email(email, max_length=254):
-    return bool(email and len(email) <= max_length and _EMAIL_RE.fullmatch(email))
+    """Thin wrapper delegating to app.services.validation (see above)."""
+    return validation.is_valid_email(email, max_length)
 
 
 def _json_number(value, digits=2):
@@ -218,12 +196,7 @@ def _persist_sentiment_snapshot(sbc, symbol, analyzed_news, overall):
         "confidence": float(overall.get("confidence") or 0),
         "news_count": len(scores),
     }
-    Thread(
-        target=sbc.record_sentiment_snapshot,
-        kwargs=snapshot,
-        daemon=True,
-        name="sentiment-history",
-    ).start()
+    _SENTIMENT_PERSIST_EXECUTOR.submit(sbc.record_sentiment_snapshot, **snapshot)
 
 
 def _sentiment_divergence(timeline, chart_data, window=14):

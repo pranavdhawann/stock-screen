@@ -58,7 +58,7 @@ jobs:
             --source . \
             --region "$REGION" \
             --project "$PROJECT_ID" \
-            --update-env-vars UMAMI_WEBSITE_ID=e299b28a-a0af-44c5-950a-e3c807498ee4 \
+            --update-env-vars UMAMI_WEBSITE_ID=e299b28a-a0af-44c5-950a-e3c807498ee4,TRUST_PROXY_HEADERS=true \
             --quiet
 
       - name: Smoke test

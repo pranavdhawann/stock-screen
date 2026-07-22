@@ -2038,3 +2038,708 @@ body,
         display: none;
     }
 }
+
+/* ============================================================
+   CONTACT / AUTH MODALS — migrated off inline style="" attributes
+   so style-src no longer needs 'unsafe-inline' for these dialogs.
+   ============================================================ */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-panel {
+    background: var(--bg-panel, #111);
+    border: 1px solid var(--border, #333);
+    width: 90%;
+    max-width: 440px;
+    padding: 0;
+    font-family: var(--font-mono, monospace);
+}
+
+.modal-panel--sm {
+    max-width: 400px;
+}
+
+.modal-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border, #333);
+}
+
+.modal-panel-title {
+    font-size: 0.75rem;
+    color: var(--accent-amber, #FFA500);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.modal-panel-close {
+    background: none;
+    border: none;
+    color: var(--text-muted, #666);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-panel-body {
+    padding: 24px;
+}
+
+.modal-field {
+    margin-bottom: 16px;
+}
+
+.modal-input {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border, #333);
+    color: var(--text-primary, #e0e0e0);
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 10px 12px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.modal-textarea {
+    resize: vertical;
+}
+
+.modal-honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.modal-submit-btn {
+    width: 100%;
+    background: var(--accent-amber, #FFA500);
+    color: #000;
+    border: none;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 11px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+}
+
+/* Visibility for these is toggled at runtime via el.style.display by
+   contact.js / account.js (they clear the inline override back to
+   '' to reveal). No `display` rule is set here on purpose: the parent
+   .modal-overlay is display:none until opened, so these are never
+   visible before JS runs, and JS always sets an explicit value when
+   showing/hiding the modal itself. */
+.modal-success-text {
+    color: var(--positive, #4caf50);
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 16px 0;
+}
+
+.modal-error-text {
+    color: var(--negative, #f44336);
+    font-size: 0.78rem;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.modal-error-text--auth {
+    padding: 10px 0 0;
+}
+
+.modal-footer-note {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.72rem;
+    color: var(--text-muted, #666);
+}
+
+.modal-link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-cyan, #00D4FF);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+    margin-left: 4px;
+}
+
+/* ============================================================
+   ABOUT PAGE — migrated off inline style="" attributes
+   ============================================================ */
+.about-card-header {
+    padding: 10px 16px;
+}
+
+.about-section-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-amber);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.about-card-body {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    padding: 28px 24px;
+}
+
+.about-intro-text {
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.about-intro-text-secondary {
+    color: var(--text-secondary);
+}
+
+.about-who-item {
+    border-left: 2px solid var(--accent-amber);
+    padding-left: 14px;
+}
+
+.about-who-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.about-who-desc {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.about-contact-text {
+    color: var(--text-primary);
+}
+
+.about-contact-btn {
+    border-radius: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 8px 20px;
+}
+
+/* ============================================================
+   SEC FILINGS PAGE — migrated off inline style="" attributes
+   ============================================================ */
+.sec-ticker-wrap {
+    position: relative;
+}
+
+/* Toggled at runtime only via explicit el.style.display = 'none' / 'block'
+   assignments in sec-filings-page.js (never cleared to ''), so this class's
+   display: none is always safely overridden by that inline assignment. */
+.sec-autocomplete-hidden {
+    display: none;
+}
+
+.sec-error-box {
+    max-width: 700px;
+}
+
+.sec-overview-text {
+    line-height: 1.7;
+}
+
+.sec-chart-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+}
+
+.sec-chart-title {
+    font-size: 0.85rem;
+}
+
+.sec-chart-box {
+    height: 180px;
+    cursor: pointer;
+}
+
+.sec-timeline-box {
+    height: 200px;
+    cursor: pointer;
+}
+
+.sec-summary-content {
+    white-space: pre-wrap;
+    line-height: 1.7;
+}
+
+/* ============================================================
+   FORECASTING PAGE — migrated off inline style="" attributes
+   ============================================================ */
+.fc-card-header-pad {
+    padding: 10px 16px;
+}
+
+.fc-usage-label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.fc-card-body-pad {
+    padding: 28px 24px;
+}
+
+.fc-ticker-select {
+    border-radius: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+}
+
+.fc-run-btn {
+    height: 41px;
+}
+
+/* forecastLoading / forecastError / forecastResults have their initial
+   display: none set via CSSOM in the page script (not a class) because
+   they are later revealed with el.style.display = '' — see the note
+   next to that assignment. Only their other static rules live here. */
+.fc-results-mt {
+    margin-top: 24px;
+}
+
+.fc-stat-box {
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    height: 100%;
+}
+
+.fc-stat-label {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fc-value-symbol {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--accent-amber);
+}
+
+.fc-value-lg {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+}
+
+.fc-value-lg-amber {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    color: var(--accent-amber);
+}
+
+.fc-value-md {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+}
+
+.fc-value-md-positive {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--positive);
+}
+
+.fc-value-md-negative {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--negative);
+}
+
+.fc-value-sub {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+/* Color is applied dynamically via el.style.color in forecasting.html's
+   inline script (CSSOM) depending on the forecast direction. */
+.fc-value-move {
+    margin-top: 4px;
+    font-size: 0.8rem;
+}
+
+.fc-card-flat {
+    border-radius: 0;
+}
+
+.fc-card-body-16 {
+    padding: 16px;
+}
+
+.fc-chart-container {
+    max-width: 100%;
+    min-height: 320px;
+    margin: 0;
+}
+
+.fc-card-body-0 {
+    padding: 0;
+}
+
+.fc-policy-body {
+    padding: 24px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.8;
+}
+
+.fc-policy-box {
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.fc-policy-title {
+    color: var(--accent-amber);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+
+.fc-policy-text {
+    color: var(--text-secondary);
+}
+
+/* forecastGateModal is only ever toggled with explicit style.display =
+   'flex' / 'none' assignments (never cleared to ''), so this persistent
+   display: none is always safely overridden by that inline assignment
+   when the modal opens. */
+.fc-gate-modal-hidden {
+    display: none;
+}
+
+.fc-gate-modal-content {
+    max-width: 460px;
+}
+
+.fc-gate-body {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.8;
+}
+
+.fc-gate-p1 {
+    margin-bottom: 14px;
+}
+
+.fc-gate-p2 {
+    margin-bottom: 18px;
+    color: var(--text-secondary);
+}
+
+/* ============================================================
+   MAIN / MARKETS + NEWS PAGE (index.html) — migrated off inline
+   style="" attributes
+   ============================================================ */
+.idx-title-clickable {
+    cursor: pointer;
+}
+
+.idx-section-label {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent-amber);
+    letter-spacing: 0.1em;
+}
+
+.idx-updated-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+/* Shared "safe" hidden state: every element that carries this class is
+   toggled elsewhere only via explicit el.style.display = '<value>' /
+   'none' assignments (never cleared back to ''), so this persistent
+   display: none is always safely overridden by that inline assignment. */
+.idx-hidden {
+    display: none;
+}
+
+.idx-watchlist-input {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    width: 120px;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.idx-watchlist-add-btn {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+}
+
+.idx-muted-072 {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+}
+
+/* No display property is set here on purpose: quickSuggestions is shown
+   elsewhere via el.style.display = '' (cleared back to the cascade
+   default), so baking display: none into this class would make it
+   impossible to reveal again. */
+.idx-quick-suggestions {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.idx-popular-label {
+    color: var(--accent-amber);
+}
+
+.idx-quick-pick-first {
+    cursor: pointer;
+    margin-left: 8px;
+    color: var(--accent-cyan);
+}
+
+.idx-quick-pick {
+    cursor: pointer;
+    color: var(--accent-cyan);
+}
+
+.idx-quick-sep {
+    color: var(--border);
+    margin: 0 4px;
+}
+
+.idx-btn-mono-07 {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+}
+
+.idx-progress-init {
+    width: 0%;
+}
+
+.idx-progress-text {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+}
+
+.idx-chart-clickable {
+    position: relative;
+    cursor: pointer;
+}
+
+/* The base .chart-expand-overlay rule (above) is a hover-reveal affordance,
+   but this overlay has always shipped with these overrides forcing it
+   fully transparent regardless of hover — reproduced here exactly
+   (including the !important, required to still beat the
+   .chart-container:hover .chart-expand-overlay rule) so behavior doesn't
+   change as part of this migration. */
+.idx-chart-expand-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    opacity: 0 !important;
+    transition: opacity 0.3s;
+}
+
+.idx-indicator-toggle-row {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+}
+
+.idx-metric-card-header {
+    padding: 10px 14px;
+}
+
+.idx-metric-card-body {
+    padding: 14px;
+}
+
+.idx-metric-chart-180 {
+    height: 180px;
+}
+
+.idx-metric-chart-150 {
+    height: 150px;
+}
+
+.idx-metric-summary {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.idx-indicator-summary {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+/* ============================================================
+   INSIGHTS PANEL (index-insights.js) — migrated off inline
+   style="" attributes injected via innerHTML.
+   .verdict-card's border-left color, the keyword badges' colors, and
+   the three .source-bar-* widths are per-result values, so they're
+   applied via CSSOM in index-insights.js right after this markup is
+   inserted (see the comment there) rather than baked in here.
+   ============================================================ */
+.insights-badge-row {
+    min-height: 32px;
+}
+
+.insights-one-liner {
+    font-size: 1.1em;
+}
+
+.insights-conf-explanation {
+    font-size: 0.85em;
+}
+
+.insights-analyst-note {
+    font-size: 0.9em;
+}
+
+.insights-meta-block {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.insights-velocity-trend {
+    color: var(--accent-amber);
+}
+
+.insights-trend-category {
+    color: var(--accent-cyan);
+}
+
+.insights-source-pct-row {
+    font-size: 0.8em;
+}
+
+.insights-analyst-takeaway {
+    font-size: 0.85em;
+}
+
+/* ============================================================
+   INDEX CHARTS (index-charts.js) — migrated off inline style=""
+   attributes injected via innerHTML.
+   ============================================================ */
+.idx-markets-error {
+    color: #FF3B3B;
+}
+
+.idx-indicator-value {
+    color: var(--text-primary);
+}
+
+/* ============================================================
+   INDEX PAGE (index-page.js) — migrated off inline style=""
+   attributes injected via innerHTML.
+   ============================================================ */
+.idx-news-time {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: #00D4FF;
+    white-space: nowrap;
+    min-width: 90px;
+    padding-top: 2px;
+}
+
+.idx-news-empty {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   SEC FILING CARDS (sec-filings-page.js) — migrated off inline
+   style="" attributes injected via innerHTML.
+   .sec-filing-type-badge's background/text color is per filing-type
+   (from getTypeColor()) and is applied via CSSOM right after this
+   markup is inserted — see the comment in sec-filings-page.js.
+   ============================================================ */
+.sec-filing-type-badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+.sec-source-badge {
+    font-size: 0.72rem;
+    padding: 5px 10px;
+}
+
+.sec-filing-date {
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.sec-filing-desc {
+    font-size: 0.9rem;
+}
+
+/* ============================================================
+   TERMINAL / TICKER TAPE (index-terminal.js) — migrated off inline
+   style="" attributes injected via innerHTML.
+   ============================================================ */
+.idx-terminal-muted {
+    color: var(--text-muted);
+}
+
+.idx-terminal-error {
+    color: var(--negative);
+}
+
+/* ============================================================
+   WATCHLIST PANEL (watchlist.js) — migrated off inline style=""
+   attributes injected via innerHTML.
+   ============================================================ */
+.wl-message {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+}
+
+.wl-signin-btn {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+}
+
+.wl-remove-btn {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    padding: 1px 8px;
+}

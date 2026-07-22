@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 from datetime import timedelta
 from pathlib import Path
 from threading import RLock
@@ -14,18 +13,14 @@ from sklearn.preprocessing import StandardScaler
 
 from app.config import get_company_name, get_currency, is_indian_stock
 from app.services.stock_data import fetch_ohlcv_history
+from lstm.src.models import LSTMForecaster
+from lstm.src.preprocessing import build_features
 
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 LSTM_ROOT = ROOT / "lstm"
 CHECKPOINT_PATH = LSTM_ROOT / "model.pt"
-
-if str(LSTM_ROOT) not in sys.path:
-    sys.path.insert(0, str(LSTM_ROOT))
-
-from src.models import LSTMForecaster  # noqa: E402
-from src.preprocessing import build_features  # noqa: E402
 
 _artifacts = None
 _lock = RLock()

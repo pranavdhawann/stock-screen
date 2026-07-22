@@ -314,7 +314,12 @@ def aggregate_news(symbol, company_name):
 
 
 def preprocess_with_groq(news_items, symbol):
-    """Use Groq to generate concise summaries and filter by relevance."""
+    """Use Groq to generate concise summaries and filter by relevance.
+
+    Returns a new list of items with filtered and updated summaries.
+    Does not mutate the input list or its items; operates on copies only.
+    Never exposes internal _relevance key to callers.
+    """
     client = _get_groq_client()
     if not client or not news_items:
         return news_items
@@ -339,6 +344,10 @@ Headlines:
         )
         text = response.choices[0].message.content.strip()
 
+        # Build a map of index -> (score, summary) from Groq response
+        # This way we can work with copies and avoid mutating the original items.
+        scores_and_summaries = {}
+
         # Parse responses
         lines = text.strip().split('\n')
         for line in lines:
@@ -356,17 +365,27 @@ Headlines:
                     score = int(rest[1:bracket_end])
                     summary = rest[bracket_end + 1:].strip()
                     if 0 <= idx < len(news_items):
-                        news_items[idx]['_relevance'] = score
-                        if summary:
-                            news_items[idx]['summary'] = summary
+                        scores_and_summaries[idx] = (score, summary)
             except (ValueError, IndexError):
                 continue
 
-        # Filter by relevance >= 5
-        filtered = [item for item in news_items if item.get('_relevance', 10) >= 5]
-        # Clean up internal field
-        for item in filtered:
-            item.pop('_relevance', None)
+        # Build filtered list with copies of items, applying updates only to copies.
+        # This ensures the original cached items remain unchanged.
+        filtered = []
+        for idx, item in enumerate(news_items):
+            if idx in scores_and_summaries:
+                score, summary = scores_and_summaries[idx]
+            else:
+                # Items without a Groq rating default to score 10 (always included)
+                score, summary = 10, None
+
+            if score >= 5:
+                # Make a copy of the item dict to avoid mutating the cached original
+                item_copy = dict(item)
+                # Update summary if provided
+                if summary:
+                    item_copy['summary'] = summary
+                filtered.append(item_copy)
 
         return filtered if filtered else news_items
 

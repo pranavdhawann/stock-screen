@@ -11,7 +11,9 @@ from functools import wraps
 from flask import Blueprint, jsonify, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app.routes.api import _consume_limit, _is_supported_symbol
+from app.services.http_limits import consume_limit
+from app.services.supabase_client import DuplicateEmailError
+from app.services.validation import is_supported_symbol, is_valid_email
 
 import logging
 
@@ -30,6 +32,13 @@ PASSWORD_MAX_LENGTH = 128
 # /api/quotes serves at most 16 symbols per request, so a larger list could
 # never be priced in one call anyway.
 WATCHLIST_MAX_SYMBOLS = 16
+
+# Precomputed so login always pays the cost of a hash comparison, even when
+# the email doesn't match any account - otherwise an unknown-user response
+# returns near-instantly while a known-user wrong-password response pays
+# for check_password_hash, letting an attacker enumerate valid emails by
+# timing alone.
+_DUMMY_PASSWORD_HASH = generate_password_hash("stock-screen-dummy-password-for-timing-parity")
 
 
 def _sbc():
@@ -55,11 +64,9 @@ def _credentials(data):
 
     Returns (email, password, error_response).
     """
-    from app.routes.api import _is_valid_email
-
     email = str(data.get('email') or '').strip().lower()
     password = str(data.get('password') or '')
-    if not _is_valid_email(email):
+    if not is_valid_email(email):
         return None, None, (jsonify({'error': 'Please enter a valid email address.'}), 400)
     if not (PASSWORD_MIN_LENGTH <= len(password) <= PASSWORD_MAX_LENGTH):
         return None, None, (
@@ -94,7 +101,7 @@ def signup():
     if error:
         return error
 
-    limited = _consume_limit("auth_signup", SIGNUP_LIMIT, SIGNUP_WINDOW_SECONDS)
+    limited = consume_limit("auth_signup", SIGNUP_LIMIT, SIGNUP_WINDOW_SECONDS)
     if limited:
         return limited
 
@@ -102,10 +109,13 @@ def signup():
     if not sbc:
         return _accounts_unavailable()
 
-    if sbc.get_user_by_email(email):
+    # No check-then-insert: the app_users.email unique constraint is the
+    # authority, so two concurrent signups for the same address can't both
+    # pass a prior SELECT and leave the loser with an opaque 502.
+    try:
+        user = sbc.create_user(email, generate_password_hash(password))
+    except DuplicateEmailError:
         return jsonify({'error': 'An account with that email already exists.'}), 409
-
-    user = sbc.create_user(email, generate_password_hash(password))
     if not user:
         return jsonify({'error': 'Unable to create the account right now.'}), 502
 
@@ -122,7 +132,7 @@ def login():
     if error:
         return error
 
-    limited = _consume_limit("auth_login", LOGIN_LIMIT, LOGIN_WINDOW_SECONDS)
+    limited = consume_limit("auth_login", LOGIN_LIMIT, LOGIN_WINDOW_SECONDS)
     if limited:
         return limited
 
@@ -131,7 +141,11 @@ def login():
         return _accounts_unavailable()
 
     user = sbc.get_user_by_email(email)
-    if not user or not check_password_hash(user.get('password_hash') or '', password):
+    # Always run a real hash comparison, even for an unknown email, so the
+    # response time doesn't leak whether the account exists.
+    password_hash = (user or {}).get('password_hash') or _DUMMY_PASSWORD_HASH
+    password_ok = check_password_hash(password_hash, password)
+    if not user or not password_ok:
         return jsonify({'error': 'Incorrect email or password.'}), 401
 
     _login_session(user)
@@ -172,10 +186,10 @@ def add_to_watchlist():
     if data is None:
         return jsonify({'error': 'Invalid request'}), 400
     symbol = str(data.get('symbol') or '').strip().upper()
-    if not _is_supported_symbol(symbol):
+    if not is_supported_symbol(symbol):
         return jsonify({'error': 'Unsupported symbol'}), 400
 
-    limited = _consume_limit(
+    limited = consume_limit(
         "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS, distributed=False
     )
     if limited:
@@ -201,10 +215,10 @@ def add_to_watchlist():
 @login_required
 def remove_from_watchlist(symbol):
     normalized = str(symbol or '').strip().upper()
-    if not _is_supported_symbol(normalized):
+    if not is_supported_symbol(normalized):
         return jsonify({'error': 'Unsupported symbol'}), 400
 
-    limited = _consume_limit(
+    limited = consume_limit(
         "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS, distributed=False
     )
     if limited:
