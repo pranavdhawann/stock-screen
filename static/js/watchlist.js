@@ -17,12 +17,12 @@
     var authenticated = false;
 
     function messageRow(html) {
-        body.innerHTML = '<tr><td colspan="6" class="text-center py-3" style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem;">' + html + '</td></tr>';
+        body.innerHTML = '<tr><td colspan="6" class="text-center py-3 wl-message">' + html + '</td></tr>';
     }
 
     function renderSignedOut() {
         messageRow('Sign in to build a watchlist that follows you across devices. ' +
-            '<button type="button" id="watchlistSignInBtn" class="btn btn-sm btn-outline-secondary ms-2" style="font-family: var(--font-mono); font-size: 0.68rem;">SIGN IN</button>');
+            '<button type="button" id="watchlistSignInBtn" class="btn btn-sm btn-outline-secondary ms-2 wl-signin-btn">SIGN IN</button>');
         var btn = document.getElementById('watchlistSignInBtn');
         if (btn) {
             btn.addEventListener('click', function() {
@@ -56,7 +56,7 @@
                 '<td class="text-end">' + cur + fmt(quote.price) + '</td>' +
                 '<td class="text-end ' + dirClass + '">' + sign + cur + fmt(Math.abs(chg)) + '</td>' +
                 '<td class="text-end ' + dirClass + '">' + sign + Math.abs(pct).toFixed(2) + '%</td>' +
-                '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary watchlist-remove" data-symbol="' + safeSymbol + '" title="Remove from watchlist" style="font-family: var(--font-mono); font-size: 0.62rem; padding: 1px 8px;">&times;</button></td>' +
+                '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary watchlist-remove wl-remove-btn" data-symbol="' + safeSymbol + '" title="Remove from watchlist">&times;</button></td>' +
                 '</tr>';
         }).join('');
 

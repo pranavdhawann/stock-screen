@@ -52,7 +52,19 @@ def create_app():
         template_folder='../templates',
         static_folder='../static',
     )
-    app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', str(1024 * 1024)))
+    _default_max_content_length = 1024 * 1024
+    _max_content_length_raw = os.environ.get('MAX_CONTENT_LENGTH')
+    if _max_content_length_raw is None:
+        app.config['MAX_CONTENT_LENGTH'] = _default_max_content_length
+    else:
+        try:
+            app.config['MAX_CONTENT_LENGTH'] = int(_max_content_length_raw)
+        except ValueError:
+            logging.getLogger(__name__).warning(
+                "Ignoring malformed MAX_CONTENT_LENGTH=%r; falling back to default of %d bytes.",
+                _max_content_length_raw, _default_max_content_length,
+            )
+            app.config['MAX_CONTENT_LENGTH'] = _default_max_content_length
 
     secret_key = os.environ.get('SECRET_KEY')
     if not secret_key and _is_production_env():
@@ -116,7 +128,7 @@ def create_app():
             'Content-Security-Policy',
             "default-src 'self'; "
             f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com{umami_src}; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+            "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             "img-src 'self' data: https:; "
             f"connect-src 'self'{umami_src}; "

@@ -62,7 +62,9 @@ Open http://127.0.0.1:5000 — market data and news work out of the box with **z
 | `EMAILJS_SERVICE_ID` / `_TEMPLATE_ID` / `_PUBLIC_KEY` | Contact form delivery | Optional |
 | `SEC_EDGAR_USER_AGENT` | Identifies you to SEC EDGAR (their policy) | Recommended |
 
-All variables are documented in [`.env.example`](.env.example). `TRUST_PROXY_HEADERS=true` only behind a trusted proxy; `MAX_CONTENT_LENGTH` (default 1 MiB) caps request bodies.
+All variables are documented in [`.env.example`](.env.example). `MAX_CONTENT_LENGTH` (default 1 MiB) caps request bodies; an invalid value falls back to the default rather than failing startup.
+
+**Client identity for rate limits.** Set `TRUST_PROXY_HEADERS=true` only behind a trusted proxy. Cloud Run appends the real client IP as the *last* entry of `X-Forwarded-For`, so the app reads that header from the right, not the left — every entry to its left is client-supplied and forgeable. `TRUSTED_PROXY_HOPS` (default `1`) selects how many positions from the end to read: leave it at `1` for a direct Cloud Run deployment, and increase it only if you put another trusted reverse proxy in front. A missing or out-of-range value falls back to the immediate connection address rather than trusting a forgeable header. With `TRUST_PROXY_HEADERS=false` behind a proxy, every visitor collapses into a single rate-limit bucket — the per-client quotas below stop being per-client.
 
 ---
 
@@ -83,7 +85,7 @@ flowchart LR
 - **Hybrid caching** — reads hit an in-memory TTL cache first, then Supabase, then the network. Writes persist to Supabase on a background worker so requests never wait. Without Supabase credentials everything degrades gracefully to memory-only.
 - **Durable quotas** — expensive endpoints (AI analysis, forecasts, contact) are rate-limited through a Postgres RPC with advisory locks, so limits survive restarts and hold across instances. A pg_cron job prunes expired cache and quota rows hourly.
 - **Graceful degradation** — no Groq key (or a tripped key) falls back to a finance-tuned lexicon analyzer and extractive summaries via a process-wide circuit breaker.
-- **Hardened by default** — CSP with per-request nonces, SRI-pinned CDNs, strict security headers, SSRF-safe filing-URL allowlists, honeypot contact form, and a 1200-line regression/security test suite.
+- **Hardened by default** — CSP with per-request script nonces, SRI-pinned CDNs, strict security headers, SSRF-safe filing-URL allowlists, honeypot contact form, and a 2400-line regression/security test suite.
 
 ```
 app/             Flask routes, services, config
@@ -111,7 +113,7 @@ Source code proves which providers are wired and how they're limited; check each
 ## Tests
 
 ```bash
-python -m pytest -q          # 80 regression + security tests
+python -m pytest -q          # 130 regression + security tests
 python -m compileall app lstm
 ```
 
@@ -147,7 +149,7 @@ gcloud run deploy stock-screen `
   --region us-central1 `
   --source . `
   --service-account infoedge-runner@PROJECT_ID.iam.gserviceaccount.com `
-  --set-env-vars FLASK_ENV=production,LOG_LEVEL=INFO,TRUST_PROXY_HEADERS=false,MAX_CONTENT_LENGTH=1048576 `
+  --set-env-vars FLASK_ENV=production,LOG_LEVEL=INFO,TRUST_PROXY_HEADERS=true,TRUSTED_PROXY_HOPS=1,MAX_CONTENT_LENGTH=1048576 `
   --set-secrets SECRET_KEY=infoedge-secret-key:latest,GROQ_API_KEY=infoedge-groq-api-key:latest,SUPABASE_URL=infoedge-supabase-url:latest,SUPABASE_SERVICE_KEY=infoedge-supabase-service-key:latest `
   --allow-unauthenticated
 ```

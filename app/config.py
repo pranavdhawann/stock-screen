@@ -9,6 +9,25 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 TRUST_PROXY_HEADERS = os.environ.get('TRUST_PROXY_HEADERS', '').lower() in {'1', 'true', 'yes'}
 
+
+def _parse_trusted_proxy_hops():
+    """Number of trusted reverse-proxy hops in front of this app.
+
+    Only meaningful when TRUST_PROXY_HEADERS is on. Cloud Run appends the
+    real client IP as the last entry of X-Forwarded-For, so hops=1 (the
+    default) selects that last entry. Any unparsable or non-positive value
+    falls back to 1 rather than disabling the right-to-left parse.
+    """
+    raw = os.environ.get('TRUSTED_PROXY_HOPS', '1')
+    try:
+        hops = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return hops if hops >= 1 else 1
+
+
+TRUSTED_PROXY_HOPS = _parse_trusted_proxy_hops()
+
 # Cache TTL (seconds)
 STOCK_DATA_TTL = 300      # 5 minutes
 NEWS_TTL = 900             # 15 minutes

@@ -3,9 +3,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system deps (gcc for C extensions)
-RUN apt-get update && apt-get install -y --no-install-recommends gcc \
-    && rm -rf /var/lib/apt/lists/*
+# No apt-get/gcc layer: every pinned dependency in requirements.txt ships a
+# manylinux wheel for Python 3.11 (Flask, Werkzeug, gunicorn, requests, groq,
+# cachetools, python-dotenv, defusedxml, supabase, numpy, pandas, scikit-learn,
+# torch, pyyaml), so nothing here needs to be compiled from source.
 
 # Install Python deps (cached layer)
 COPY requirements.txt .
@@ -31,7 +32,11 @@ ENV FLASK_APP=wsgi.py \
 
 EXPOSE 8080
 
-# Health check using Python (curl not available in slim)
+# HEALTHCHECK is kept for local `docker run`/docker-compose convenience only.
+# Cloud Run (the actual deploy target) ignores the Docker HEALTHCHECK
+# instruction entirely -- it manages container health via its own
+# startup/liveness probes configured on the Cloud Run service, so this
+# directive has no effect in production.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')" || exit 1
 

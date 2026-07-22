@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 import math
-import sys
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[2]
-LSTM_ROOT = ROOT / "lstm"
-
-if str(LSTM_ROOT) not in sys.path:
-    sys.path.insert(0, str(LSTM_ROOT))
-
-from src.preprocessing import build_features  # noqa: E402
+from lstm.src.preprocessing import build_features
 
 
 def _clean(value: Any):

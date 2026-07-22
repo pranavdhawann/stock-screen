@@ -23,12 +23,14 @@ from sklearn.preprocessing import StandardScaler
 
 LEGACY_ROOT = Path(__file__).resolve().parents[1]
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+PROJECT_ROOT = ROOT.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data import load_ohlcv  # noqa: E402
-from src.models import LSTMForecaster  # noqa: E402
-from src.preprocessing import build_features  # noqa: E402
-from src.utils import load_config  # noqa: E402
+from lstm.src.data import load_ohlcv  # noqa: E402
+from lstm.src.models import LSTMForecaster  # noqa: E402
+from lstm.src.preprocessing import build_features  # noqa: E402
+from lstm.src.utils import load_config  # noqa: E402
 
 PREDICT = ROOT / "predict"
 PLOTS = PREDICT / "plots"

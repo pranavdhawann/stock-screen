@@ -28,94 +28,94 @@
     <div class="row g-4 justify-content-center">
         <div class="col-lg-8">
             <div class="card card-enhanced">
-                <div class="card-header d-flex justify-content-between align-items-center" style="padding: 10px 16px;">
+                <div class="card-header d-flex justify-content-between align-items-center fc-card-header-pad">
                     <span>Forecast Runner</span>
-                    <span id="forecastUsageLabel" style="font-size: 0.68rem; color: var(--text-muted);">1 free run remaining</span>
+                    <span id="forecastUsageLabel" class="fc-usage-label">1 free run remaining</span>
                 </div>
-                <div class="card-body" style="padding: 28px 24px;">
+                <div class="card-body fc-card-body-pad">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-8">
                             <label for="forecastTicker" class="form-label">Select Stock</label>
-                            <select id="forecastTicker" class="form-select" style="border-radius: 0; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border); font-family: var(--font-mono);">
+                            <select id="forecastTicker" class="form-select fc-ticker-select">
                                 <option value="">Loading stocks...</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <button id="runForecastBtn" class="btn btn-primary w-100" style="height: 41px;">Run Forecast</button>
+                            <button id="runForecastBtn" class="btn btn-primary w-100 fc-run-btn">Run Forecast</button>
                         </div>
                     </div>
 
-                    <div id="forecastLoading" class="alert alert-info mt-4" style="display: none;">
+                    <div id="forecastLoading" class="alert alert-info mt-4">
                         <div class="terminal-cursor">Running LSTM forecast</div>
                     </div>
 
-                    <div id="forecastError" class="alert alert-danger mt-4" style="display: none;"></div>
+                    <div id="forecastError" class="alert alert-danger mt-4"></div>
 
-                    <div id="forecastEmpty" class="alert alert-warning mt-4" style="margin-bottom: 0;">
+                    <div id="forecastEmpty" class="alert alert-warning mt-4 mb-0">
                         Select a stock and run the model to generate a live short-horizon price forecast.
                     </div>
 
-                    <div id="forecastResults" style="display: none; margin-top: 24px;">
+                    <div id="forecastResults" class="fc-results-mt">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Selected Stock</div>
-                                    <div id="forecastSymbolLine" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent-amber);"></div>
-                                    <div id="forecastMetaLine" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Selected Stock</div>
+                                    <div id="forecastSymbolLine" class="fc-value-symbol"></div>
+                                    <div id="forecastMetaLine" class="fc-value-sub"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Latest Close</div>
-                                    <div id="forecastLastClose" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.2rem;"></div>
-                                    <div id="forecastAsOf" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Latest Close</div>
+                                    <div id="forecastLastClose" class="fc-value-lg"></div>
+                                    <div id="forecastAsOf" class="fc-value-sub"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Predicted 5 day Close</div>
-                                    <div id="forecastNextClose" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.2rem; color: var(--accent-amber);"></div>
-                                    <div id="forecastNextMove" style="margin-top: 4px; font-size: 0.8rem;"></div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Predicted 5 day Close</div>
+                                    <div id="forecastNextClose" class="fc-value-lg-amber"></div>
+                                    <div id="forecastNextMove" class="fc-value-move"></div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Backtest MAE</div>
-                                    <div id="forecastMae" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem;"></div>
-                                    <div id="forecastRiskSigma" style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;"></div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Backtest MAE</div>
+                                    <div id="forecastMae" class="fc-value-md"></div>
+                                    <div id="forecastRiskSigma" class="fc-value-sub"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Bull Case</div>
-                                    <div id="forecastBullCase" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem; color: var(--positive);"></div>
-                                    <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;">Residual-adjusted upper path</div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Bull Case</div>
+                                    <div id="forecastBullCase" class="fc-value-md-positive"></div>
+                                    <div class="fc-value-sub">Residual-adjusted upper path</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div style="border: 1px solid var(--border); padding: 14px 16px; height: 100%;">
-                                    <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">Bear Case</div>
-                                    <div id="forecastBearCase" style="margin-top: 8px; font-family: var(--font-mono); font-size: 1.05rem; color: var(--negative);"></div>
-                                    <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8rem;">Residual-adjusted lower path</div>
+                                <div class="fc-stat-box">
+                                    <div class="fc-stat-label">Bear Case</div>
+                                    <div id="forecastBearCase" class="fc-value-md-negative"></div>
+                                    <div class="fc-value-sub">Residual-adjusted lower path</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card mb-3" style="border-radius: 0;">
-                            <div class="card-header" style="padding: 10px 16px;">Projected Path</div>
-                            <div class="card-body" style="padding: 16px;">
-                                <div class="chart-container" style="max-width: 100%; min-height: 320px; margin: 0;">
+                        <div class="card mb-3 fc-card-flat">
+                            <div class="card-header fc-card-header-pad">Projected Path</div>
+                            <div class="card-body fc-card-body-16">
+                                <div class="chart-container fc-chart-container">
                                     <canvas id="forecastChart"></canvas>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card" style="border-radius: 0;">
-                            <div class="card-header" style="padding: 10px 16px;">Forecast Horizon</div>
-                            <div class="card-body" style="padding: 0;">
+                        <div class="card fc-card-flat">
+                            <div class="card-header fc-card-header-pad">Forecast Horizon</div>
+                            <div class="card-body fc-card-body-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead>
@@ -140,11 +140,11 @@
 
         <div class="col-lg-4">
             <div class="card card-enhanced">
-                <div class="card-header" style="padding: 10px 16px;">Run Policy</div>
-                <div class="card-body" style="padding: 24px 20px; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.8;">
-                    <div style="border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 14px;">
-                        <div style="color: var(--accent-amber); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;">Free Access</div>
-                        <div style="color: var(--text-secondary);">Each user gets 1 free forecast run. After that, forecasting is subscription-gated.</div>
+                <div class="card-header fc-card-header-pad">Run Policy</div>
+                <div class="card-body fc-policy-body">
+                    <div class="fc-policy-box">
+                        <div class="fc-policy-title">Free Access</div>
+                        <div class="fc-policy-text">Each user gets 1 free forecast run. After that, forecasting is subscription-gated.</div>
                     </div>
                 </div>
             </div>
@@ -152,15 +152,15 @@
     </div>
 </div>
 
-<div id="forecastGateModal" class="chart-modal" style="display: none;">
-    <div class="chart-modal-content" style="max-width: 460px;">
+<div id="forecastGateModal" class="chart-modal fc-gate-modal-hidden">
+    <div class="chart-modal-content fc-gate-modal-content">
         <div class="chart-modal-header">
             <h5 class="modal-title">Subscription Required</h5>
             <button id="forecastGateClose" class="chart-modal-close" type="button">&times;</button>
         </div>
-        <div class="chart-modal-body" style="font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.8;">
-            <p style="margin-bottom: 14px;">You've already used your free forecast run.</p>
-            <p style="margin-bottom: 18px; color: var(--text-secondary);">Subscribe to continue running live forecasts. Checkout flow will be added separately.</p>
+        <div class="chart-modal-body fc-gate-body">
+            <p class="fc-gate-p1">You've already used your free forecast run.</p>
+            <p class="fc-gate-p2">Subscribe to continue running live forecasts. Checkout flow will be added separately.</p>
             <button id="forecastGateAcknowledge" class="btn btn-primary">Understood</button>
         </div>
     </div>
@@ -195,6 +195,14 @@
     const fetchJson = window.StockScreenUtils.fetchJson;
     let forecastChart = null;
     let forecastStatus = { limit: 1, remaining: 0, reset_at: null };
+
+    // Establish the initial hidden state via CSSOM (equivalent to the
+    // display:none these elements used to carry as an inline style
+    // attribute) so it stays compatible with the style.display = ''
+    // reveal calls below.
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'none';
+    resultsEl.style.display = 'none';
 
     function isLocalTesting() {
         return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';

@@ -96,73 +96,73 @@
     </div>
 
     <!-- Contact Modal -->
-    <div id="contactModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
-        <div style="background:var(--bg-panel,#111); border:1px solid var(--border,#333); width:90%; max-width:440px; padding:0; font-family:var(--font-mono,monospace);">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border,#333);">
-                <span style="font-size:0.75rem; color:var(--accent-amber,#FFA500); text-transform:uppercase; letter-spacing:0.1em;">
+    <div id="contactModal" class="modal-overlay">
+        <div class="modal-panel">
+            <div class="modal-panel-header">
+                <span class="modal-panel-title">
                     CONTACT
                 </span>
-                <button id="contactModalClose" type="button" style="background:none; border:none; color:var(--text-muted,#666); cursor:pointer; font-size:1.1rem; padding:0; line-height:1;">&times;</button>
+                <button id="contactModalClose" type="button" class="modal-panel-close">&times;</button>
             </div>
-            <div style="padding:24px;">
+            <div class="modal-panel-body">
                 <form id="contactModalForm">
-                    <div style="margin-bottom:16px;">
+                    <div class="modal-field">
                         <input type="text" id="cmName" placeholder="Name" maxlength="120" required
-                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                            class="modal-input">
                     </div>
-                    <div style="margin-bottom:16px;">
+                    <div class="modal-field">
                         <input type="email" id="cmEmail" placeholder="Email" maxlength="254" required
-                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                            class="modal-input">
                     </div>
-                    <div style="margin-bottom:16px;">
+                    <div class="modal-field">
                         <textarea id="cmMessage" placeholder="Message" rows="4" maxlength="3000" required
-                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+                            class="modal-input modal-textarea"></textarea>
                     </div>
-                    <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                    <div class="modal-honeypot" aria-hidden="true">
                         <input type="text" id="cmWebsite" name="website" tabindex="-1" autocomplete="off">
                         <input type="text" id="cmCompany" name="company" tabindex="-1" autocomplete="off">
                     </div>
                     <button type="submit" id="cmSubmitBtn"
-                        style="width:100%; background:var(--accent-amber,#FFA500); color:#000; border:none; font-family:inherit; font-size:0.78rem; font-weight:700; padding:11px; cursor:pointer; letter-spacing:0.05em;">
+                        class="modal-submit-btn">
                         SEND MESSAGE
                     </button>
                 </form>
-                <div id="cmSuccess" style="display:none; color:var(--positive,#4caf50); font-size:0.82rem; text-align:center; padding:16px 0;">
+                <div id="cmSuccess" class="modal-success-text">
                     Message sent. We'll be in touch.
                 </div>
-                <div id="cmError" style="display:none; color:var(--negative,#f44336); font-size:0.78rem; text-align:center; padding:8px 0;"></div>
+                <div id="cmError" class="modal-error-text"></div>
             </div>
         </div>
     </div>
 
     <!-- Auth Modal -->
-    <div id="authModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
-        <div style="background:var(--bg-panel,#111); border:1px solid var(--border,#333); width:90%; max-width:400px; padding:0; font-family:var(--font-mono,monospace);">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border,#333);">
-                <span id="authModalTitle" style="font-size:0.75rem; color:var(--accent-amber,#FFA500); text-transform:uppercase; letter-spacing:0.1em;">
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-panel modal-panel--sm">
+            <div class="modal-panel-header">
+                <span id="authModalTitle" class="modal-panel-title">
                     SIGN IN
                 </span>
-                <button id="authModalClose" type="button" style="background:none; border:none; color:var(--text-muted,#666); cursor:pointer; font-size:1.1rem; padding:0; line-height:1;">&times;</button>
+                <button id="authModalClose" type="button" class="modal-panel-close">&times;</button>
             </div>
-            <div style="padding:24px;">
+            <div class="modal-panel-body">
                 <form id="authForm">
-                    <div style="margin-bottom:16px;">
+                    <div class="modal-field">
                         <input type="email" id="authEmail" placeholder="Email" maxlength="254" required autocomplete="email"
-                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                            class="modal-input">
                     </div>
-                    <div style="margin-bottom:16px;">
+                    <div class="modal-field">
                         <input type="password" id="authPassword" placeholder="Password (8+ characters)" minlength="8" maxlength="128" required autocomplete="current-password"
-                            style="width:100%; background:transparent; border:1px solid var(--border,#333); color:var(--text-primary,#e0e0e0); font-family:inherit; font-size:0.82rem; padding:10px 12px; outline:none; box-sizing:border-box;">
+                            class="modal-input">
                     </div>
                     <button type="submit" id="authSubmitBtn"
-                        style="width:100%; background:var(--accent-amber,#FFA500); color:#000; border:none; font-family:inherit; font-size:0.78rem; font-weight:700; padding:11px; cursor:pointer; letter-spacing:0.05em;">
+                        class="modal-submit-btn">
                         SIGN IN
                     </button>
                 </form>
-                <div id="authError" style="display:none; color:var(--negative,#f44336); font-size:0.78rem; text-align:center; padding:10px 0 0;"></div>
-                <div style="text-align:center; margin-top:16px; font-size:0.72rem; color:var(--text-muted,#666);">
+                <div id="authError" class="modal-error-text modal-error-text--auth"></div>
+                <div class="modal-footer-note">
                     <span id="authTogglePrompt">No account yet?</span>
-                    <button id="authToggleMode" type="button" style="background:none; border:none; color:var(--accent-cyan,#00D4FF); cursor:pointer; font-family:inherit; font-size:inherit; padding:0; margin-left:4px;">Create one</button>
+                    <button id="authToggleMode" type="button" class="modal-link-btn">Create one</button>
                 </div>
             </div>
         </div>
