@@ -55,11 +55,16 @@ EMAILJS_PUBLIC_KEY = os.environ.get('EMAILJS_PUBLIC_KEY', '')
 NEWSAPI_KEY = os.environ.get('NEWSAPI_KEY', '')
 FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY', '')
 ALPHAVANTAGE_API_KEY = os.environ.get('ALPHAVANTAGE_API_KEY', '')
-CURRENTS_API_KEY = os.environ.get('CURRENTS_API_KEY', '')
 
 # Aggregated news cache
 AGGREGATED_NEWS_CACHE_SIZE = 100
 AGGREGATED_NEWS_TTL = 600  # 10 minutes
+
+# General market headlines (/api/market_news). Only one entry per market, and
+# deliberately memory-only: the Supabase aggregated_news_cache table is keyed
+# by `symbol` and its news_items column holds a list of articles, neither of
+# which fits a market-wide payload.
+MARKET_NEWS_CACHE_SIZE = 8
 
 # Yahoo Finance request headers
 YAHOO_HEADERS = {
@@ -150,6 +155,13 @@ MARKET_INDICES = {
     ],
 }
 
+# Indian market indices, quoted in rupees. Kept separate from INDIAN_STOCKS
+# (equities) because get_yahoo_symbol() must NOT append ".NS" to these -
+# Yahoo's index tickers (^NSEI, ^BSESN) are already correct as-is and a
+# ".NS" suffix would break the lookup. Only get_currency() should consult
+# this set.
+INDIAN_MARKET_INDEX_SYMBOLS = {market['symbol'].upper() for market in MARKET_INDICES['IN']}
+
 
 def _normalize_symbol(symbol):
     return str(symbol or "").upper()
@@ -174,4 +186,7 @@ def get_yahoo_symbol(symbol):
 
 
 def get_currency(symbol):
-    return "₹" if is_indian_stock(symbol) else "$"
+    normalized = _normalize_symbol(symbol)
+    if is_indian_stock(normalized) or normalized in INDIAN_MARKET_INDEX_SYMBOLS:
+        return "₹"
+    return "$"

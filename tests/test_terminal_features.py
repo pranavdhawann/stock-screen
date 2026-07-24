@@ -46,24 +46,32 @@ def test_fallback_sentiment_returns_real_labels():
 # ── Groq guard ───────────────────────────────────────────────────────
 
 def test_groq_guard_trips_on_auth_error(monkeypatch):
+    """A 401 disables Groq for the process, so get_client() stops handing one out.
+
+    Asserted through get_client() rather than the breaker flag: that is the
+    only way callers observe the breaker, and returning None is what routes
+    every AI service onto its non-AI fallback.
+    """
     from app.services import groq_guard
 
     monkeypatch.setattr(groq_guard, "_auth_failed", False)
-    assert not groq_guard.groq_disabled()
+    monkeypatch.setattr(groq_guard, "_client", object())
+    assert groq_guard.get_client() is not None
 
     class FakeAuthError(Exception):
         status_code = 401
 
     assert groq_guard.note_groq_error(FakeAuthError("invalid_api_key"))
-    assert groq_guard.groq_disabled()
+    assert groq_guard.get_client() is None
 
 
 def test_groq_guard_ignores_transient_errors(monkeypatch):
     from app.services import groq_guard
 
     monkeypatch.setattr(groq_guard, "_auth_failed", False)
+    monkeypatch.setattr(groq_guard, "_client", object())
     assert not groq_guard.note_groq_error(TimeoutError("read timed out"))
-    assert not groq_guard.groq_disabled()
+    assert groq_guard.get_client() is not None
 
 
 # ── Quotes endpoint ──────────────────────────────────────────────────
@@ -106,9 +114,9 @@ def test_quotes_endpoint_rejects_unsupported_symbols(client):
 
 
 def test_spy_is_supported_for_news_fallback(client):
-    # Homepage headlines fall back to /api/news?symbol=SPY; SPY must
-    # pass symbol validation (the request itself may then hit the network,
-    # so only assert it is not rejected as unsupported).
+    # SPY is the index proxy the tape and /api/news lean on, so it must pass
+    # symbol validation like any other directory entry (the request itself may
+    # then hit the network, so only assert it is not rejected as unsupported).
     from app.routes.api import _is_supported_symbol
 
     assert _is_supported_symbol("SPY")
@@ -147,10 +155,10 @@ def test_stats_overview_without_ai():
 def test_memory_cache_hit_skips_supabase(monkeypatch):
     from app.services import cache as cache_module
 
-    def _boom():
-        raise AssertionError("Supabase map should not be consulted on a memory hit")
+    def _boom(*_args):
+        raise AssertionError("Supabase backend should not be consulted on a memory hit")
 
-    monkeypatch.setattr(cache_module, "_sb_map", _boom)
+    monkeypatch.setattr(cache_module, "_persistence_for", _boom)
     cache_module.stock_data_cache["unit_test_key"] = {"value": 42}
     try:
         assert cache_module.get_cached(cache_module.stock_data_cache, "unit_test_key") == {"value": 42}

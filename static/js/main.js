@@ -52,12 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSearchPlaceholder();
     window.addEventListener('resize', debounce(updateSearchPlaceholder, 150));
 
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
     // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -109,19 +103,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     improveAccessibility();
-
-    // Back to top
-    const backToTopBtn = document.getElementById('backToTop');
-    if (backToTopBtn) {
-        backToTopBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        window.addEventListener('scroll', function() {
-            backToTopBtn.classList.toggle('visible', window.pageYOffset > 300);
-        });
-    }
 
     document.querySelectorAll('[data-action="open-contact-modal"]').forEach(button => {
         button.addEventListener('click', function() {

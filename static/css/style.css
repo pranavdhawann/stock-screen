@@ -297,6 +297,27 @@ body::after {
     border-color: var(--accent-amber);
 }
 
+/* Paid-tier CTA. Filled rather than outlined so it reads as the primary
+   action next to the outlined SIGN IN button. */
+.nav-waitlist-btn {
+    background: var(--accent-amber);
+    border: 1px solid var(--accent-amber);
+    color: var(--bg-base, #0f1117);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 5px 12px;
+    white-space: nowrap;
+    transition: opacity var(--transition-fast);
+}
+
+.nav-waitlist-btn:hover {
+    opacity: 0.85;
+}
+
 .nav-hamburger {
     display: none;
     background: none;
@@ -316,72 +337,51 @@ body::after {
     color: var(--accent-amber);
 }
 
-/* Market selector dropdown */
+/* Market selector — segmented toggle (USA / INDIA) */
 .market-selector {
     display: flex;
     align-items: center;
 }
 
-.market-select {
-    background: var(--bg-primary);
-    color: var(--text-primary);
+/* Segmented pill toggle replacing the old <select> UI */
+.market-toggle {
+    display: inline-flex;
     border: 1px solid var(--border);
-    border-radius: 0;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    padding: 3px 24px 3px 6px;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23FFA500' d='M0 2l4 4 4-4z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 6px center;
     transition: border-color var(--transition-fast);
 }
 
-.market-select:hover,
-.market-select:focus {
-    border-color: var(--accent-amber);
-    outline: none;
+.market-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 0;
+    white-space: nowrap;
+    transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-.market-select option {
-    background: var(--bg-panel);
+.market-toggle-btn + .market-toggle-btn {
+    border-left: 1px solid var(--border);
+}
+
+.market-toggle-btn:hover {
     color: var(--text-primary);
 }
 
-/* Back to top floating button */
-.back-to-top-widget {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    z-index: 100;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-}
-
-.back-to-top-widget.visible {
-    opacity: 1;
-}
-
-.back-to-top-toggle {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    transition: all var(--transition-fast);
-}
-
-.back-to-top-toggle:hover {
-    border-color: var(--accent-amber);
+.market-toggle-btn.active {
     color: var(--accent-amber);
+    background: rgba(255, 165, 0, 0.1);
+}
+
+.market-toggle-btn:focus-visible {
+    outline: 2px solid var(--accent-amber);
+    outline-offset: -2px;
 }
 
 /* ============================================================
@@ -753,10 +753,6 @@ body::after {
     content: '\2588';
     animation: cursor-blink 1s step-end infinite;
     margin-left: 4px;
-}
-
-#loadingSpinner {
-    padding: 20px 0;
 }
 
 /* ============================================================
@@ -1242,7 +1238,6 @@ body::after {
     color: var(--text-primary) !important;
 }
 
-.alert-warning .alert-heading,
 .alert-warning strong {
     color: var(--accent-amber);
 }
@@ -1398,18 +1393,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================================
-   BOOTSTRAP OVERRIDES — Tooltips
-   ============================================================ */
-.tooltip-inner {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    border-radius: 0;
-}
-
-/* ============================================================
    UTILITY OVERRIDES — Backgrounds & borders
    ============================================================ */
 .bg-dark {
@@ -1478,11 +1461,16 @@ hr {
         flex: 1 1 auto;
         justify-content: flex-end;
         margin-right: 8px;
-        gap: 12px;
+        gap: 8px;
     }
 
     .status-label {
         display: none;
+    }
+
+    .market-toggle-btn {
+        padding: 5px 7px;
+        font-size: 0.6rem;
     }
 
     .title-section {
@@ -1665,8 +1653,7 @@ hr {
         display: none;
     }
 
-    .top-nav,
-    .back-to-top-widget {
+    .top-nav {
         display: none !important;
     }
 
@@ -1714,8 +1701,7 @@ hr {
 /* ============================================================
    VISUALLY HIDDEN
    ============================================================ */
-.visually-hidden,
-.sr-only {
+.visually-hidden {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;
@@ -2142,6 +2128,14 @@ body,
    .modal-overlay is display:none until opened, so these are never
    visible before JS runs, and JS always sets an explicit value when
    showing/hiding the modal itself. */
+/* Intro copy above a modal form (paid-tier waitlist). */
+.modal-lead {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
 .modal-success-text {
     color: var(--positive, #4caf50);
     font-size: 0.82rem;

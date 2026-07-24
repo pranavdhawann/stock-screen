@@ -3,9 +3,10 @@
 GROQ_API_KEY is read once at import time, so a 401 (invalid/revoked key)
 will fail identically for the lifetime of the process. Without this guard
 every request still pays for the failing call (the SDK retries internally),
-which adds seconds of latency on top of the broken feature. Services check
-`groq_disabled()` before building a client and report failures through
-`note_groq_error()`.
+which adds seconds of latency on top of the broken feature. Services get
+their client from `get_client()` - which returns None once the breaker has
+tripped, so the caller's existing "no client" fallback path handles it - and
+report failures through `note_groq_error()`.
 """
 
 import logging
@@ -14,10 +15,6 @@ logger = logging.getLogger(__name__)
 
 _auth_failed = False
 _client = None
-
-
-def groq_disabled() -> bool:
-    return _auth_failed
 
 
 def get_client():

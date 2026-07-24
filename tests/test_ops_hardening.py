@@ -14,8 +14,6 @@ Covers:
 import logging
 import os
 
-import pytest
-
 
 def _make_app(monkeypatch, max_content_length=None):
     from app import create_app

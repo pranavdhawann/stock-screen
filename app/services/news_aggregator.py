@@ -1,14 +1,15 @@
 import requests
 import logging
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from defusedxml import ElementTree as ET
 from email.utils import parsedate_to_datetime
 from app.config import (
     NEWSAPI_KEY, FINNHUB_API_KEY, ALPHAVANTAGE_API_KEY,
-    GROQ_MODEL,
+    GROQ_MODEL, is_indian_stock,
 )
 from app.services.cache import aggregated_news_cache, get_cached, set_cached
+from app.services.executors import news_fanout_executor
 from app.services.groq_guard import get_client as _get_groq_client, note_groq_error
 from app.services.news import fetch_news as fetch_yahoo_news
 
@@ -182,10 +183,20 @@ def fetch_from_alphavantage(symbol):
 
 
 def fetch_from_google_rss(symbol, company_name):
-    """Fetch news from Google News RSS (no API key required)."""
+    """Fetch news from Google News RSS (no API key required).
+
+    Indian symbols get a market-hinted query (company name + NSE/India)
+    and the India Google News edition, since a bare mnemonic like
+    "RELIANCE" mixed with the default US edition returns few or no
+    relevant results.
+    """
     try:
-        query = f"{symbol}+{company_name.split()[0]}+stock"
-        url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+        if is_indian_stock(symbol):
+            query = f"{company_name.split()[0]}+{symbol}+NSE+India+stock"
+            url = f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en"
+        else:
+            query = f"{symbol}+{company_name.split()[0]}+stock"
+            url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
         resp = requests.get(url, timeout=10, headers={
             'User-Agent': 'Mozilla/5.0 (compatible; StockScreen/1.0)'
         })
@@ -257,12 +268,68 @@ def fetch_from_marketwatch_rss(symbol):
         return []
 
 
+def fetch_general_market_news(market):
+    """General market headlines via Google News RSS (no API key required).
+
+    Used by /api/market_news. Unlike fetch_from_google_rss (which targets a
+    single symbol/company), this queries broad market-level terms so the
+    Track News page has something to show for a market rather than a stock.
+    """
+    try:
+        if market == 'IN':
+            query = "Indian+stock+market+NSE+BSE+Sensex+Nifty"
+            url = f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en"
+            default_publisher = 'Google News India'
+        else:
+            query = "US+stock+market+Wall+Street+S%26P+500"
+            url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+            default_publisher = 'Google News'
+
+        resp = requests.get(url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; StockScreen/1.0)'
+        })
+        resp.raise_for_status()
+
+        root = ET.fromstring(resp.text)
+        items = []
+        for item_el in root.findall('.//item')[:20]:
+            title = item_el.findtext('title', '')
+            link = item_el.findtext('link', '')
+            pub_date_str = item_el.findtext('pubDate', '')
+            source = item_el.findtext('source', default_publisher)
+
+            try:
+                published = int(parsedate_to_datetime(pub_date_str).timestamp())
+            except Exception:
+                published = int(datetime.now().timestamp())
+
+            items.append({
+                'title': title,
+                'summary': '',
+                'link': link,
+                'publisher': source or default_publisher,
+                'published': published,
+            })
+
+        unique = _dedup_news(items)
+        unique.sort(key=lambda x: x.get('published', 0), reverse=True)
+        return unique[:20]
+    except Exception as e:
+        logger.warning("Market news RSS fetch failed for %s: %s", market, _safe_error_label(e))
+        return []
+
+
 def _dedup_news(items):
-    """Remove duplicate articles by normalized title."""
+    """Remove duplicate articles by normalized title.
+
+    Items without a title (but with a link) still get deduplicated - and
+    kept - using the link as the fallback key, instead of being silently
+    dropped for lacking a title.
+    """
     seen = set()
     unique = []
     for item in items:
-        key = item['title'].lower().strip()
+        key = (item.get('title') or '').lower().strip() or (item.get('link') or '').strip()
         if key and key not in seen:
             seen.add(key)
             unique.append(item)
@@ -283,23 +350,29 @@ def aggregate_news(symbol, company_name):
         ('marketwatch_rss', lambda: fetch_from_marketwatch_rss(symbol)),
     ]
 
+    # Finnhub and Alpha Vantage can't resolve bare Indian mnemonics (e.g.
+    # "RELIANCE") - they expect US-listed tickers - so skip the pointless
+    # network calls for Indian symbols; Google/MarketWatch RSS still run.
+    indian = is_indian_stock(symbol)
+
     if NEWSAPI_KEY:
         sources.append(('newsapi', lambda: fetch_from_newsapi(symbol, company_name)))
-    if FINNHUB_API_KEY:
+    if FINNHUB_API_KEY and not indian:
         sources.append(('finnhub', lambda: fetch_from_finnhub(symbol)))
-    if ALPHAVANTAGE_API_KEY:
+    if ALPHAVANTAGE_API_KEY and not indian:
         sources.append(('alphavantage', lambda: fetch_from_alphavantage(symbol)))
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(fn): name for name, fn in sources}
-        for future in as_completed(futures):
-            source_name = futures[future]
-            try:
-                result = future.result()
-                logger.info("Fetched %d items from %s for %s", len(result), source_name, symbol)
-                all_items.extend(result)
-            except Exception as e:
-                logger.warning("Optional news source %s failed: %s", source_name, _safe_error_label(e))
+    # Shared bounded pool rather than a fresh one per request - see
+    # app/services/executors.py.
+    futures = {news_fanout_executor.submit(fn): name for name, fn in sources}
+    for future in as_completed(futures):
+        source_name = futures[future]
+        try:
+            result = future.result()
+            logger.info("Fetched %d items from %s for %s", len(result), source_name, symbol)
+            all_items.extend(result)
+        except Exception as e:
+            logger.warning("Optional news source %s failed: %s", source_name, _safe_error_label(e))
 
     # Dedup and sort by recency
     unique = _dedup_news(all_items)
@@ -393,8 +466,3 @@ Headlines:
         logger.error("Groq preprocessing error: %s", e)
         note_groq_error(e)
         return news_items
-
-
-def has_extra_sources():
-    """Check if any additional news API keys are configured."""
-    return bool(NEWSAPI_KEY or FINNHUB_API_KEY or ALPHAVANTAGE_API_KEY)

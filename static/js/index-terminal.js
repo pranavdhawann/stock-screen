@@ -20,14 +20,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }).format(number);
     }
 
-    const TAPE_SYMBOLS = ['^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META', 'JPM', 'NFLX', 'V'];
+    const TAPE_SYMBOLS_BY_MARKET = {
+        US: ['^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META', 'JPM', 'NFLX', 'V'],
+        IN: ['^NSEI', '^BSESN', 'TCS', 'INFY', 'RELIANCE', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'ITC', 'BHARTIARTL', 'MARUTI', 'TATAPOWER'],
+    };
     const QUOTES_REFRESH_MS = 60 * 1000;
+
+    // Shared current-market state (set by index-page.js's #marketSelect
+    // change handler). Fall back to reading the select directly so a plain
+    // page reload picks up the right market even before that handler runs.
+    function getCurrentMarket() {
+        const marketSelect = document.getElementById('marketSelect');
+        if (marketSelect) {
+            return marketSelect.value === 'IN' ? 'IN' : 'US';
+        }
+        return window.StockScreenMarket === 'IN' ? 'IN' : 'US';
+    }
 
     function initTerminalClocks() {
         const zones = [
-            { id: 'clockNY', tz: 'America/New_York' },
-            { id: 'clockLDN', tz: 'Europe/London' },
-            { id: 'clockMUM', tz: 'Asia/Kolkata' },
+            { id: 'clockUSA', tz: 'America/New_York' },
+            { id: 'clockIndia', tz: 'Asia/Kolkata' },
         ];
         const formatters = zones.map(zone => ({
             el: document.getElementById(zone.id),
@@ -155,7 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadTerminalQuotes() {
-        fetchJson(`/api/quotes?symbols=${encodeURIComponent(TAPE_SYMBOLS.join(','))}`)
+        const market = getCurrentMarket();
+        const tapeSymbols = TAPE_SYMBOLS_BY_MARKET[market] || TAPE_SYMBOLS_BY_MARKET.US;
+        fetchJson(`/api/quotes?symbols=${encodeURIComponent(tapeSymbols.join(','))}`)
             .then(data => {
                 const quotes = data.quotes || [];
                 renderTickerTape(quotes);
@@ -179,7 +194,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    // Exposed so index-page.js can trigger an immediate refresh when the
+    // market toggle changes, following the same convention as
+    // window.StockScreenCharts (see index-charts.js).
+    window.StockScreenTerminal = window.StockScreenTerminal || {};
+    window.StockScreenTerminal.loadTerminalQuotes = loadTerminalQuotes;
+
     initTerminalClocks();
     loadTerminalQuotes();
+    // Re-reads the current market every tick via loadTerminalQuotes/getCurrentMarket.
     setInterval(loadTerminalQuotes, QUOTES_REFRESH_MS);
 });

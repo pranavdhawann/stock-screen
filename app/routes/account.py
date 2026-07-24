@@ -189,8 +189,12 @@ def add_to_watchlist():
     if not is_supported_symbol(symbol):
         return jsonify({'error': 'Unsupported symbol'}), 400
 
+    # Distributed: the handler already makes Supabase round-trips to read and
+    # write the watchlist, so enforcing the limit there too costs nothing
+    # extra - and an in-memory limit would be per-instance, i.e. N x the cap
+    # once Cloud Run scales out.
     limited = consume_limit(
-        "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS, distributed=False
+        "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS
     )
     if limited:
         return limited
@@ -218,8 +222,12 @@ def remove_from_watchlist(symbol):
     if not is_supported_symbol(normalized):
         return jsonify({'error': 'Unsupported symbol'}), 400
 
+    # Distributed: the handler already makes Supabase round-trips to read and
+    # write the watchlist, so enforcing the limit there too costs nothing
+    # extra - and an in-memory limit would be per-instance, i.e. N x the cap
+    # once Cloud Run scales out.
     limited = consume_limit(
-        "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS, distributed=False
+        "watchlist", WATCHLIST_MUTATION_LIMIT, WATCHLIST_MUTATION_WINDOW_SECONDS
     )
     if limited:
         return limited

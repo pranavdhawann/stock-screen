@@ -17,7 +17,7 @@ def test_app_factory_and_wsgi_entrypoint_import(monkeypatch):
     app = create_app()
     routes = {rule.rule for rule in app.url_map.iter_rules()}
     assert "/api/forecast" in routes
-    assert "/api/waitlist" not in routes
+    assert "/api/waitlist" in routes
 
     spec = importlib.util.spec_from_file_location("wsgi", ROOT / "wsgi.py")
     assert spec and spec.loader
@@ -198,7 +198,9 @@ def test_default_request_body_limit_is_configured(monkeypatch):
 
 def test_public_news_proxies_validate_symbols_and_use_rate_limits():
     api = read("app/routes/api.py")
-    assert 'limited = _consume_limit("public_news"' in api
+    # Tiered since the scale-out fix: a per-instance burst guard in front of
+    # the durable cross-instance hourly quota (see http_limits).
+    assert '_consume_tiered_limit(\n        "public_news",' in api
     assert "def _is_supported_symbol" in api
     assert "if not _is_supported_symbol(symbol):" in api
 
@@ -639,7 +641,6 @@ def test_analyze_sentiment_returns_aligned_timeline_and_divergence(monkeypatch):
     rate_limit._events.clear()
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(rate_limit, "_get_supabase_client", lambda: None)
-    monkeypatch.setattr(api.news_aggregator, "has_extra_sources", lambda: False)
     monkeypatch.setattr(
         api.stock_data,
         "fetch_stock_data",
@@ -657,12 +658,17 @@ def test_analyze_sentiment_returns_aligned_timeline_and_divergence(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        api.news,
-        "fetch_news",
+        api.news_aggregator,
+        "aggregate_news",
         lambda *_args: [
             {"title": "good", "summary": "", "published": ts(2)},
             {"title": "bad", "summary": "", "published": ts(2)},
         ],
+    )
+    monkeypatch.setattr(
+        api.news_aggregator,
+        "preprocess_with_groq",
+        lambda items, *_args: items,
     )
     monkeypatch.setattr(
         api.sentiment,
@@ -891,18 +897,22 @@ def test_contact_endpoint_rejects_oversized_message_before_send(monkeypatch):
     assert rate_limit._events == {}
 
 
-def test_waitlist_backend_surface_is_removed():
+def test_waitlist_does_not_reintroduce_the_resend_email_integration():
+    """The waitlist route is back (paid-tier access requests), the mailer is not.
+
+    An earlier waitlist shipped with a Resend-backed confirmation email; that
+    whole surface - including the RESEND_API_KEY secret - was removed. The
+    current implementation only inserts a row into public.waitlist and sends
+    nothing, so no mail-provider credential should reappear anywhere.
+    """
     api = read("app/routes/api.py")
     config = read("app/config.py")
     env_example = read(".env.example")
-    supabase_helper = read("app/services/supabase_client.py")
 
-    assert "@api_bp.route('/waitlist'" not in api
-    assert "join_waitlist" not in api
     assert "RESEND_API_KEY" not in api
     assert "RESEND_API_KEY" not in config
     assert "RESEND_API_KEY" not in env_example
-    assert "def add_to_waitlist" not in supabase_helper
+    assert "resend" not in api.lower()
 
 
 def test_sec_filings_overview_rejects_malformed_filings(monkeypatch):

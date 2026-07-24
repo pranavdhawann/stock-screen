@@ -167,12 +167,27 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Main title element not found!');
     }
 
-    // Market selector dropdown
+    // Market selector dropdown. window.StockScreenMarket is shared state that
+    // index-terminal.js also reads (falls back to #marketSelect.value itself
+    // if this hasn't been set yet, e.g. on a fresh page load).
     const marketSelect = document.getElementById('marketSelect');
+    window.StockScreenMarket = marketSelect && marketSelect.value === 'IN' ? 'IN' : 'US';
+
     if (marketSelect) {
         marketSelect.addEventListener('change', function() {
-            window.StockScreenCharts.loadDefaultMarkets(this.value);
+            window.StockScreenMarket = this.value === 'IN' ? 'IN' : 'US';
+
+            window.StockScreenCharts && window.StockScreenCharts.loadDefaultMarkets(this.value);
             toggleStockSections(this.value);
+            window.StockScreenTerminal && window.StockScreenTerminal.loadTerminalQuotes();
+
+            // Stale US/IN autocomplete results shouldn't linger across a
+            // market switch.
+            if (autocompleteController) {
+                autocompleteController.abort();
+                autocompleteController = null;
+            }
+            dismissAutocomplete();
         });
     }
 
@@ -293,7 +308,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 autocompleteController.abort();
             }
             autocompleteController = new AbortController();
-            fetchJson(`/api/search_stocks?q=${encodeURIComponent(query)}`, { signal: autocompleteController.signal })
+            const market = window.StockScreenMarket === 'IN' ? 'IN' : 'US';
+            fetchJson(`/api/search_stocks?q=${encodeURIComponent(query)}&market=${market}`, { signal: autocompleteController.signal })
                 .then(data => {
                     displayAutocomplete(data);
                 })
@@ -331,12 +347,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const MIN_NEWS_ITEMS = 5;
+
     function renderNewsToContainer(newsItems, container) {
         if (!container) return;
 
-        // Drop any article whose sentiment resolves to N/A.
+        // Only drop an article when its sentiment was explicitly computed
+        // and resolves to N/A - never drop one merely for lacking the
+        // field (Finnhub items, market-wire items, etc. never carry one).
         const allItems = (Array.isArray(newsItems) ? newsItems : [])
-            .filter(item => getDisplaySentiment(item?.sentiment || 'Unknown') !== 'N/A');
+            .filter(item => item?.sentiment == null || getDisplaySentiment(item.sentiment) !== 'N/A');
         const cutoff = Date.now() - NEWS_LOOKBACK_MS;
         let recentNewsItems = allItems.filter(item => {
             const published = Number(item?.published || 0);
@@ -344,13 +364,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return publishedMs >= cutoff;
         });
 
-        // If the 3-day window filters everything out, show the most recent
-        // items anyway - an empty panel reads as "news is broken".
-        if (recentNewsItems.length === 0 && allItems.length > 0) {
-            recentNewsItems = allItems
-                .slice()
-                .sort((a, b) => Number(b?.published || 0) - Number(a?.published || 0))
-                .slice(0, 10);
+        // If the 3-day window leaves us with too few items to look
+        // credible, top up with the most recent remaining items (by date)
+        // instead of discarding what the window already found.
+        if (recentNewsItems.length < MIN_NEWS_ITEMS && allItems.length > recentNewsItems.length) {
+            const remaining = allItems
+                .filter(item => !recentNewsItems.includes(item))
+                .sort((a, b) => Number(b?.published || 0) - Number(a?.published || 0));
+            const need = Math.max(MIN_NEWS_ITEMS - recentNewsItems.length, 0);
+            recentNewsItems = recentNewsItems
+                .concat(remaining.slice(0, need))
+                .sort((a, b) => Number(b?.published || 0) - Number(a?.published || 0));
         }
 
         if (recentNewsItems.length === 0) {
@@ -372,9 +396,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 minute: '2-digit',
                 hour12: false,
             }) : '--:--';
+            const hasSentiment = item?.sentiment != null;
             const sentimentLabel = escapeHtml(getDisplaySentiment(item?.sentiment || 'Unknown'));
             const sentimentClass = getSentimentBadgeColor(item?.sentiment || 'Unknown');
-            const showSentimentBadge = !(container.id === 'marketHeadlines' && sentimentLabel === 'N/A');
+            // Omit the pill entirely when there's no sentiment to show,
+            // rather than rendering a bogus/empty badge.
+            const showSentimentBadge = hasSentiment && sentimentLabel !== 'N/A';
             const safeLink = sanitizeUrl(item?.link);
             const safeAriaTitle = escapeHtml(`Read full article: ${titleRaw.slice(0, 50)}...`);
 
@@ -492,97 +519,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ─── Market Headlines (Currents API — cached server-side in Supabase) ───
-
-    function updateHeadlinesTimestamp(fetchedAt) {
-        const label = document.getElementById('headlinesLastUpdated');
-        if (!label) return;
-        if (!fetchedAt) { label.textContent = ''; return; }
-        const ts = new Date(fetchedAt).getTime();
-        const diff = Date.now() - ts;
-        const mins = Math.floor(diff / 60000);
-        if (mins < 1) label.textContent = 'Updated just now';
-        else if (mins < 60) label.textContent = `Updated ${mins}m ago`;
-        else label.textContent = `Updated ${Math.floor(mins / 60)}h ${mins % 60}m ago`;
-    }
-
-    function loadMarketHeadlines() {
-        const headlinesContainer = document.getElementById('marketHeadlines');
-        if (!headlinesContainer) return;
-
-        headlinesContainer.innerHTML = '<div class="text-center py-3"><span class="terminal-cursor">LOADING HEADLINES</span></div>';
-
-        fetchJson('/api/currents_news')
-            .then(data => {
-                if (data.news && data.news.length > 0) {
-                    const src = data.cached ? 'Supabase cache' : 'Currents API';
-                    debugLog(`[Headlines] Loaded ${data.news.length} items from ${src}`);
-                    renderCurrentsNews(data.news, headlinesContainer);
-                    updateHeadlinesTimestamp(data.fetched_at || null);
-                } else {
-                    debugLog('[Headlines] No Currents results, falling back to SPY news');
-                    loadFallbackHeadlines(headlinesContainer);
-                }
-            })
-            .catch(err => {
-                console.error('[Headlines] Fetch error:', err);
-                loadFallbackHeadlines(headlinesContainer);
-            });
-    }
-
-    function loadFallbackHeadlines(container) {
-        fetchJson('/api/news?symbol=SPY')
-            .then(data => {
-                if (data.news_items && data.news_items.length > 0) {
-                    renderNewsToContainer(data.news_items, container);
-                } else {
-                    container.innerHTML = '<div class="text-center py-3 idx-news-empty">No headlines available</div>';
-                }
-            })
-            .catch(() => {
-                container.innerHTML = '<div class="text-center py-3 idx-news-empty">Unable to load headlines</div>';
-            });
-    }
-
-    function renderCurrentsNews(items, container) {
-        if (!container || !items || items.length === 0) {
-            container.innerHTML = '<div class="text-center py-3 idx-news-empty">No headlines available</div>';
-            return;
-        }
-
-        container.innerHTML = items.map(item => {
-            const titleRaw = String(item.title || '');
-            const summaryRaw = String(item.summary || '');
-            const summaryTrimmed = summaryRaw.length > 200 ? `${summaryRaw.slice(0, 200)}...` : summaryRaw;
-            const publisher = escapeHtml(item.publisher || 'News');
-            const published = Number(item.published || 0);
-            const publishedMs = published < 1e12 ? published * 1000 : published;
-            const timeLabel = publishedMs ? new Date(publishedMs).toLocaleString('en-US', {
-                month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
-            }) : '--:--';
-            const safeLink = sanitizeUrl(item.link);
-
-            return `
-                <div class="news-item">
-                    <div class="d-flex align-items-start gap-2">
-                        <span class="idx-news-time">${escapeHtml(timeLabel)}</span>
-                        <div class="flex-grow-1">
-                            <div class="news-header-mobile mb-1">
-                                ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(titleRaw)}</a>` : escapeHtml(titleRaw)}
-                            </div>
-                            ${summaryTrimmed ? `<p class="news-snippet mb-1">${escapeHtml(summaryTrimmed)}</p>` : ''}
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="publisher">${publisher}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Load headlines on page load
-    loadMarketHeadlines();
+    // Market Wire headlines moved off the main page onto /track-news (see
+    // static/js/track-news.js); #marketHeadlines no longer exists here, so
+    // there is nothing left for this file to load or render.
 
     // Chart range toggle
     const chartRangeToggle = document.getElementById('chartRangeToggle');
@@ -681,21 +620,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Reset all function (kept for compatibility)
-    window.resetAll = function() {
-        // Clear search input
-        searchInput.value = '';
-
-        // Hide dropdowns
-        dismissAutocomplete();
-        sampleStocksDropdown.style.display = 'none';
-
-        // Call auto-reset
-        autoReset();
-
-        // Default markets section stays visible
-    };
-
     // ─── Finnhub — Stock-specific news (cached server-side in Supabase) ───
 
     function fetchFinnhubNews(symbol) {
@@ -774,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         link: fn.link,
                         publisher: fn.publisher || 'Finnhub',
                         published: fn.published,
-                        sentiment: 'Unknown', // Finnhub items don't have sentiment analysis
+                        sentiment: null, // Finnhub items don't have sentiment analysis - omit the pill, don't fake one
                     }));
                 data.news_items = [...data.news_items, ...newItems]
                     .sort((a, b) => (b.published || 0) - (a.published || 0));

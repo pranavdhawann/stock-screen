@@ -3,14 +3,14 @@
 {% block title %}Forecasting - Stock Screen{% endblock %}
 
 {% block seo %}
-<meta name="description" content="Stock Screen Forecasting - live LSTM-based short-horizon price forecasts from 60-day OHLCV windows.">
+<meta name="description" content="Stock Screen Forecasting - live AI short-horizon price forecasts from 60-day OHLCV windows.">
 <meta property="og:title" content="Forecasting - Stock Screen">
-<meta property="og:description" content="Run live LSTM-based short-horizon stock forecasts from 60-day OHLCV history.">
+<meta property="og:description" content="Run live AI short-horizon stock forecasts from 60-day OHLCV history.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Stock Screen">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Forecasting - Stock Screen">
-<meta name="twitter:description" content="Live LSTM-based short-horizon stock forecasts from 60-day OHLCV windows.">
+<meta name="twitter:description" content="Live AI short-horizon stock forecasts from 60-day OHLCV windows.">
 {% endblock %}
 
 {% block content %}
@@ -46,7 +46,7 @@
                     </div>
 
                     <div id="forecastLoading" class="alert alert-info mt-4">
-                        <div class="terminal-cursor">Running LSTM forecast</div>
+                        <div class="terminal-cursor">Running AI forecast</div>
                     </div>
 
                     <div id="forecastError" class="alert alert-danger mt-4"></div>
@@ -166,6 +166,8 @@
     </div>
 </div>
 {% endblock %}
+
+{% block chart_libs %}{% include 'partials/chart_libs.html' %}{% endblock %}
 
 {% block extra_scripts %}
 <script nonce="{{ csp_nonce }}">

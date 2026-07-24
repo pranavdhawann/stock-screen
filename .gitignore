@@ -81,6 +81,9 @@ replace_script.py
 *.orig
 _sb_audit.py
 
+# Flask instance folder (local sentiment-history fallback store, etc.)
+instance/
+
 # --- Boilerplate docs with placeholder emails ---
 CODE_OF_CONDUCT.md
 PRIVACY.md

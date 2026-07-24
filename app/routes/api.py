@@ -2,19 +2,22 @@ from flask import Blueprint, request, jsonify
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import threading
 from app.config import (
     STOCK_DIRECTORY, INDIAN_STOCKS, MARKET_INDICES,
     get_company_name, get_currency, is_indian_stock,
-    CURRENTS_API_KEY,
     EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
 )
 from app.services import (
-    bse_filings, stock_data, news, sentiment, insights, sec_edgar,
-    news_aggregator, forecasting, indicators, validation,
+    bse_filings, stock_data, sentiment, insights, sec_edgar,
+    news_aggregator, forecasting, indicators, validation, sentiment_store,
 )
+from app.services.cache import market_news_cache, get_cached, set_cached
+from app.services.executors import market_data_executor
 from app.services.http_limits import (
     client_key as _client_key,
     consume_limit as _consume_limit,
+    consume_tiered_limit as _consume_tiered_limit,
 )
 from app.services.rate_limit import status as rate_limit_status
 import requests as http_requests
@@ -35,6 +38,27 @@ CONTACT_EMAIL_MAX_LENGTH = 254
 CONTACT_MESSAGE_MAX_LENGTH = 3000
 PUBLIC_NEWS_LIMIT = 60
 PUBLIC_NEWS_WINDOW_SECONDS = 60 * 60
+# Local anti-hammer window checked before the durable hourly quota above.
+# See http_limits.consume_tiered_limit for why the public news endpoints need
+# both a per-instance burst guard and a cross-instance quota.
+PUBLIC_NEWS_BURST_LIMIT = 15
+PUBLIC_NEWS_BURST_WINDOW_SECONDS = 60
+WAITLIST_LIMIT = 5
+WAITLIST_WINDOW_SECONDS = 60 * 60
+WAITLIST_EMAIL_MAX_LENGTH = 254
+
+# Deliberately identical for a new address and one already on the list - see
+# supabase_client.add_waitlist_email() on why the two must not be told apart.
+WAITLIST_CONFIRMATION = "You're on the list. We'll email you when paid-tier access opens."
+
+# How far back the sentiment graph asks for stored daily snapshots. Nothing
+# prunes public.sentiment_history, so this is purely a read window.
+#
+# fetch_stock_data's default '30d' period is 30 *trading* days, which spans
+# roughly 44 calendar days - so a 30-calendar-day window would leave the
+# oldest couple of weeks of the chart unable to show stored scores. 60 covers
+# the whole chart with margin and is well above the 30-day floor we promise.
+SENTIMENT_HISTORY_DAYS = 60
 
 _VALID_MARKETS = {"US", "IN"}
 _SEC_FILING_TYPES = ("10-K", "10-Q", "8-K")
@@ -45,6 +69,24 @@ _MAX_OVERVIEW_FILINGS = 25
 # requests can't spawn an unbounded number of raw threads (mirrors the
 # cache-persist pool in app/services/cache.py).
 _SENTIMENT_PERSIST_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="sentiment-persist")
+
+# Logged once (not per-request) the first time Supabase is unavailable and
+# analyze_sentiment falls back to the local sentiment_store, so the log
+# stays useful instead of repeating on every request.
+_supabase_unavailable_warned = False
+_supabase_unavailable_lock = threading.Lock()
+
+
+def _warn_supabase_unavailable_once():
+    global _supabase_unavailable_warned
+    with _supabase_unavailable_lock:
+        if _supabase_unavailable_warned:
+            return
+        _supabase_unavailable_warned = True
+    logger.warning(
+        "Supabase is unavailable (SUPABASE_URL/SUPABASE_SERVICE_KEY not configured or "
+        "unreachable); falling back to the local sentiment_store for sentiment history."
+    )
 
 
 def _is_supported_symbol(symbol, *, include_market_indices=False):
@@ -158,11 +200,29 @@ def _build_sentiment_timeline(analyzed_news, chart_data):
     return timeline
 
 
+def _day_to_epoch_ms(day_label):
+    """UTC midnight of an ISO day as epoch milliseconds.
+
+    chart_data points carry `date` in epoch ms (see stock_data.fetch_stock_data),
+    and the front-end passes it straight to `new Date(...)`, so history-only
+    points must use the same unit - seconds would render them in 1970.
+    """
+    try:
+        parsed = datetime.strptime(str(day_label), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+    return int(parsed.timestamp() * 1000)
+
+
 def _merge_sentiment_history(timeline, history_rows):
     """Fill timeline days that have no current headlines with stored history.
 
     Without this, any day older than the news lookback window renders as a
     flat 0 even though we analyzed it before.
+
+    Only fills points that already exist, so the timeline stays 1:1 with
+    chart_data - see _sentiment_divergence. Days the chart never covers are
+    handled by _extend_timeline_with_history instead.
     """
     history_map = {str(row.get("day")): row for row in history_rows or []}
     for point in timeline or []:
@@ -180,8 +240,69 @@ def _merge_sentiment_history(timeline, history_rows):
     return timeline
 
 
-def _persist_sentiment_snapshot(sbc, symbol, analyzed_news, overall):
-    """Store today's aggregate score so it survives the cache TTL."""
+def _extend_timeline_with_history(timeline, history_rows):
+    """Append stored days that the price chart never covers.
+
+    _build_sentiment_timeline emits exactly one point per chart_data row, and
+    fetch_stock_data's default '30d' period returns only ~21 *trading* days.
+    A snapshot recorded on a weekend or holiday therefore had no point to land
+    on and stayed invisible forever, even though Supabase retains
+    sentiment_history indefinitely. Appending those days is what actually gets
+    a full SENTIMENT_HISTORY_DAYS window onto the graph.
+
+    Must run AFTER _sentiment_divergence, which walks timeline[idx] and
+    chart_data[idx] in lockstep and needs that 1:1 alignment intact.
+    """
+    points = list(timeline or [])
+    known = {point.get("date_label") for point in points}
+    for row in history_rows or []:
+        day = str(row.get("day") or "")
+        if not day or day in known:
+            continue
+        stamp = _day_to_epoch_ms(day)
+        if stamp is None:
+            continue
+        try:
+            score = round(float(row.get("score") or 0), 2)
+        except (TypeError, ValueError):
+            continue
+        known.add(day)
+        points.append({
+            "date": stamp,
+            "date_label": day,
+            "score": score,
+            "headline_count": int(row.get("news_count") or 0),
+            "source": "history",
+        })
+    points.sort(key=lambda point: point.get("date") or 0)
+    return points
+
+
+def _log_persist_result(symbol, future):
+    """done_callback for the sentiment-persist executor.
+
+    submit() swallowed any exception raised inside the worker thread until
+    someone inspected the returned Future, so a persistence failure never
+    surfaced anywhere. This makes it observable in the logs instead.
+    """
+    try:
+        exc = future.exception()
+    except Exception as callback_exc:  # pragma: no cover - defensive only
+        logger.error("Sentiment persist callback failed for %s: %s", symbol, callback_exc, exc_info=True)
+        return
+    if exc is not None:
+        logger.error("Sentiment snapshot persist failed for %s: %s", symbol, exc, exc_info=exc)
+    elif future.result() is False:
+        logger.warning("Sentiment snapshot persist returned failure for %s", symbol)
+
+
+def _persist_sentiment_snapshot(history_backend, symbol, analyzed_news, overall):
+    """Store today's aggregate score so it survives the cache TTL.
+
+    `history_backend` is either app.services.supabase_client or
+    app.services.sentiment_store - both expose the same
+    record_sentiment_snapshot(**kwargs) -> bool signature.
+    """
     scores = [
         score for score in (_news_sentiment_score(item) for item in analyzed_news)
         if score is not None
@@ -196,11 +317,25 @@ def _persist_sentiment_snapshot(sbc, symbol, analyzed_news, overall):
         "confidence": float(overall.get("confidence") or 0),
         "news_count": len(scores),
     }
-    _SENTIMENT_PERSIST_EXECUTOR.submit(sbc.record_sentiment_snapshot, **snapshot)
+    future = _SENTIMENT_PERSIST_EXECUTOR.submit(history_backend.record_sentiment_snapshot, **snapshot)
+    future.add_done_callback(lambda f: _log_persist_result(symbol, f))
 
 
 def _sentiment_divergence(timeline, chart_data, window=14):
+    """Correlation gap between recent price moves and sentiment.
+
+    `timeline` must be the chart-aligned timeline from
+    _build_sentiment_timeline: one point per chart_data row, in the same
+    order, since the loop below reads timeline[idx] and chart_data[idx]
+    together. A shorter timeline is unusable rather than an IndexError.
+    """
     if len(timeline or []) < 3 or len(chart_data or []) < 3:
+        return 0.0
+    if len(timeline) < len(chart_data):
+        logger.warning(
+            "Sentiment timeline (%d points) is shorter than chart data (%d); "
+            "skipping divergence.", len(timeline), len(chart_data),
+        )
         return 0.0
 
     price_returns = []
@@ -276,8 +411,21 @@ def _get_supabase_client():
 
 @api_bp.route('/stock_list')
 def stock_list():
+    market = request.args.get('market', '').upper()
+    if market and market not in _VALID_MARKETS:
+        return jsonify({'error': 'market must be US or IN'}), 400
+
     us_stocks = [s for s in STOCK_DIRECTORY if s['symbol'] not in INDIAN_STOCKS]
     in_stocks = [s for s in STOCK_DIRECTORY if s['symbol'] in INDIAN_STOCKS]
+
+    # When a specific market is requested, only populate that market's list
+    # but keep both keys present for backward compatibility with clients
+    # that always read both.
+    if market == 'US':
+        in_stocks = []
+    elif market == 'IN':
+        us_stocks = []
+
     return jsonify({"US": us_stocks, "IN": in_stocks})
 
 
@@ -288,7 +436,13 @@ def get_news():
         return jsonify({'error': 'Symbol is required'}), 400
     if not _is_supported_symbol(symbol):
         return jsonify({'error': 'Unsupported symbol'}), 400
-    limited = _consume_limit("public_news", PUBLIC_NEWS_LIMIT, PUBLIC_NEWS_WINDOW_SECONDS, distributed=False)
+    limited = _consume_tiered_limit(
+        "public_news",
+        burst_limit=PUBLIC_NEWS_BURST_LIMIT,
+        burst_window_seconds=PUBLIC_NEWS_BURST_WINDOW_SECONDS,
+        quota_limit=PUBLIC_NEWS_LIMIT,
+        quota_window_seconds=PUBLIC_NEWS_WINDOW_SECONDS,
+    )
     if limited:
         return limited
     try:
@@ -431,12 +585,13 @@ def get_default_markets():
             return jsonify({'error': 'location must be US or IN'}), 400
         markets = MARKET_INDICES[location]
 
-        # Fetch all indices in parallel - each fetch may hit the network.
-        with ThreadPoolExecutor(max_workers=max(len(markets), 1)) as executor:
-            fetched = list(executor.map(
-                lambda market: stock_data.fetch_stock_data(market['symbol']),
-                markets,
-            ))
+        # Fetch all indices in parallel on the shared market-data pool - each
+        # fetch may hit the network. See app/services/executors.py for why
+        # this is not a per-request ThreadPoolExecutor.
+        fetched = list(market_data_executor.map(
+            lambda market: stock_data.fetch_stock_data(market['symbol']),
+            markets,
+        ))
 
         market_data = []
         for market, data in zip(markets, fetched):
@@ -532,8 +687,7 @@ def get_quotes():
         return jsonify({'error': 'At least one supported symbol is required'}), 400
 
     try:
-        with ThreadPoolExecutor(max_workers=min(len(symbols), 8)) as executor:
-            results = list(executor.map(_build_quote, symbols))
+        results = list(market_data_executor.map(_build_quote, symbols))
         quotes = [quote for quote in results if quote]
         return jsonify({
             'quotes': quotes,
@@ -570,12 +724,14 @@ def analyze_sentiment():
                 'error': f'Unable to fetch stock data for {symbol}. Yahoo Finance may be temporarily unavailable.'
             }), 503
 
-        # 2. Fetch news (multi-source if API keys available, otherwise Yahoo only)
-        if news_aggregator.has_extra_sources():
-            news_items = news_aggregator.aggregate_news(symbol, company_name)
-            news_items = news_aggregator.preprocess_with_groq(news_items, symbol)
-        else:
-            news_items = news.fetch_news(symbol, company_name)
+        # 2. Fetch news. aggregate_news() always includes the free Google/
+        # MarketWatch RSS sources (no API key needed) and conditionally adds
+        # paid sources internally when their keys are configured, so it is
+        # always the right call here - not just when paid keys are present.
+        # preprocess_with_groq() is a no-op passthrough when GROQ_API_KEY is
+        # unset, so this degrades safely with zero API keys.
+        news_items = news_aggregator.aggregate_news(symbol, company_name)
+        news_items = news_aggregator.preprocess_with_groq(news_items, symbol)
 
         # 3. Analyze sentiment via Groq
         analyzed_news = sentiment.analyze_news_sentiment(news_items, symbol)
@@ -588,13 +744,26 @@ def analyze_sentiment():
         # chart shows real past scores instead of flat zeros.
         sentiment_data = sentiment.derive_sentiment_timeline(analyzed_news)
         sentiment_timeline = _build_sentiment_timeline(analyzed_news, sd['chart_data'])
+
+        # History backend: Supabase when configured/reachable, otherwise the
+        # local sentiment_store fallback - never skipped outright, so
+        # history persists either way instead of silently doing nothing.
         sbc = _get_supabase_client()
         if sbc and sbc.is_available():
-            sentiment_timeline = _merge_sentiment_history(
-                sentiment_timeline, sbc.get_sentiment_history(symbol)
-            )
-            _persist_sentiment_snapshot(sbc, symbol, analyzed_news, overall)
+            history_backend = sbc
+        else:
+            _warn_supabase_unavailable_once()
+            history_backend = sentiment_store
+
+        history_rows = history_backend.get_sentiment_history(symbol, SENTIMENT_HISTORY_DAYS)
+        sentiment_timeline = _merge_sentiment_history(sentiment_timeline, history_rows)
+        _persist_sentiment_snapshot(history_backend, symbol, analyzed_news, overall)
+
+        # Divergence walks the timeline and chart_data by index, so it has to
+        # run while they are still 1:1 - i.e. before history-only days (weekends,
+        # anything older than the chart window) are appended.
         sentiment_divergence = _sentiment_divergence(sentiment_timeline, sd['chart_data'])
+        sentiment_timeline = _extend_timeline_with_history(sentiment_timeline, history_rows)
         liquidity = _volume_liquidity_metrics(sd['chart_data'])
 
         # 6. Generate AI insights
@@ -741,6 +910,39 @@ def get_filings_overview():
     return jsonify(result)
 
 
+@api_bp.route('/waitlist', methods=['POST'])
+def join_waitlist():
+    """Record a request for paid-tier access.
+
+    Stores only the address - public.waitlist is (id, email, created_at) and
+    there is exactly one paid tier to request, so there is nothing else worth
+    collecting. Mirrors /contact's honeypot + rate-limit shape.
+    """
+    data = _json_object()
+    if data is None:
+        return jsonify({'error': 'Invalid request'}), 400
+
+    if data.get("website") or data.get("company"):
+        logger.info("Waitlist honeypot submission ignored from %s", _client_key())
+        return jsonify({'status': 'ok', 'message': WAITLIST_CONFIRMATION})
+
+    email = str(data.get('email') or '').strip().lower()
+    if not _is_valid_email(email, WAITLIST_EMAIL_MAX_LENGTH):
+        return jsonify({'error': 'Please enter a valid email address'}), 400
+
+    limited = _consume_limit("waitlist", WAITLIST_LIMIT, WAITLIST_WINDOW_SECONDS)
+    if limited:
+        return limited
+
+    sbc = _get_supabase_client()
+    outcome = sbc.add_waitlist_email(email) if sbc else 'unavailable'
+    if outcome == 'unavailable':
+        return jsonify({'error': 'The waitlist is unavailable right now. Please try again later.'}), 503
+
+    # 'added' and 'duplicate' intentionally return the same body and status.
+    return jsonify({'status': 'ok', 'message': WAITLIST_CONFIRMATION})
+
+
 @api_bp.route('/contact', methods=['POST'])
 def send_contact_message():
     """Validate and forward contact form messages through the server-side mail provider."""
@@ -796,75 +998,54 @@ def send_contact_message():
     return jsonify({'status': 'ok', 'message': 'Message sent.'})
 
 
-@api_bp.route('/currents_news')
-def get_currents_news():
-    """Proxy for Currents API general market/finance news."""
-    limited = _consume_limit("public_news", PUBLIC_NEWS_LIMIT, PUBLIC_NEWS_WINDOW_SECONDS, distributed=False)
+@api_bp.route('/market_news')
+def get_market_news():
+    """General market headlines for the Track News page.
+
+    Works with zero API keys via the free Google News RSS path in
+    news_aggregator. Cached per-market so US and IN never collide, in the
+    memory-only market_news_cache - see app/services/cache.py for why this
+    payload must not reach the symbol-keyed Supabase news table.
+    """
+    market = request.args.get('market', 'US').upper()
+    if market not in _VALID_MARKETS:
+        return jsonify({'error': 'market must be US or IN'}), 400
+
+    limited = _consume_tiered_limit(
+        "public_news",
+        burst_limit=PUBLIC_NEWS_BURST_LIMIT,
+        burst_window_seconds=PUBLIC_NEWS_BURST_WINDOW_SECONDS,
+        quota_limit=PUBLIC_NEWS_LIMIT,
+        quota_window_seconds=PUBLIC_NEWS_WINDOW_SECONDS,
+    )
     if limited:
         return limited
 
-    sbc = _get_supabase_client()
-
-    # 1. Check Supabase cache
-    if sbc and sbc.is_available():
-        cached = sbc.get_currents_cache()
-        if cached:
-            return jsonify({
-                'news': cached['news_items'],
-                'cached': True,
-                'fetched_at': cached['fetched_at'],
-            })
-
-    # 2. No cache hit - call Currents API
-    if not CURRENTS_API_KEY:
-        return jsonify({'error': 'Currents API key not configured', 'news': []}), 200
-
+    cache_key = f"market_news_{market}"
     try:
-        resp = http_requests.get(
-            'https://api.currentsapi.services/v1/latest-news',
-            params={
-                'apiKey': CURRENTS_API_KEY,
-                'language': 'en',
-                'category': 'finance,business',
-            },
-            # Keep the tail short: when Currents is slow the client falls
-            # back to SPY news, so waiting 10s only delays the fallback.
-            timeout=5,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get('status') != 'ok':
-            logger.error("Currents API error: %s", data)
-            return jsonify({'error': 'Currents API error', 'news': []}), 200
+        cached = get_cached(market_news_cache, cache_key)
+        if cached is not None:
+            return jsonify(cached)
 
-        items = []
-        for article in data.get('news', [])[:20]:
-            pub_date = article.get('published', '')
-            try:
-                published = int(datetime.fromisoformat(
-                    pub_date.replace('Z', '+00:00').replace(' +0000', '+00:00')
-                ).timestamp())
-            except (ValueError, AttributeError):
-                published = int(datetime.now().timestamp())
-
-            items.append({
-                'title': article.get('title', ''),
-                'summary': (article.get('description', '') or '')[:200],
-                'link': article.get('url', ''),
-                'publisher': article.get('author', '') or 'Currents',
-                'published': published,
-                'image': article.get('image', ''),
-            })
-
-        # 3. Store in Supabase cache
-        if items and sbc and sbc.is_available():
-            sbc.set_currents_cache(items)
-
-        return jsonify({'news': items, 'cached': False})
-
+        news_items = news_aggregator.fetch_general_market_news(market)
+        payload = {
+            'news': news_items,
+            'market': market,
+            'fetched_at': int(datetime.now(timezone.utc).timestamp()),
+        }
+        # Only cache non-empty results so a transient RSS failure doesn't
+        # blank the page for the full cache TTL (matches aggregate_news).
+        if news_items:
+            set_cached(market_news_cache, cache_key, payload)
+        return jsonify(payload)
     except Exception as e:
-        logger.error("Currents API fetch error: %s", type(e).__name__)
-        return jsonify({'error': 'Unable to fetch market headlines right now.', 'news': []}), 200
+        logger.error("Error in get_market_news for %s: %s", market, e)
+        return jsonify({
+            'error': 'Unable to fetch market news right now.',
+            'news': [],
+            'market': market,
+            'fetched_at': int(datetime.now(timezone.utc).timestamp()),
+        }), 200
 
 
 @api_bp.route('/finnhub_news')
@@ -876,7 +1057,13 @@ def get_finnhub_news():
     if not _is_supported_symbol(symbol):
         return jsonify({'error': 'Unsupported symbol'}), 400
 
-    limited = _consume_limit("public_news", PUBLIC_NEWS_LIMIT, PUBLIC_NEWS_WINDOW_SECONDS, distributed=False)
+    limited = _consume_tiered_limit(
+        "public_news",
+        burst_limit=PUBLIC_NEWS_BURST_LIMIT,
+        burst_window_seconds=PUBLIC_NEWS_BURST_WINDOW_SECONDS,
+        quota_limit=PUBLIC_NEWS_LIMIT,
+        quota_window_seconds=PUBLIC_NEWS_WINDOW_SECONDS,
+    )
     if limited:
         return limited
 

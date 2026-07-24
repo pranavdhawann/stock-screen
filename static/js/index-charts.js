@@ -49,12 +49,28 @@ document.addEventListener('DOMContentLoaded', function() {
         return !toggle || toggle.checked;
     }
 
+    // Destroy every live Chart bound to a canvas inside `container`.
+    //
+    // Replacing a container's innerHTML detaches its canvases, but Chart.js
+    // keeps each live instance in its own registry — so an implicit teardown
+    // never happens. Without this, every market switch leaked two charts
+    // (each holding a resize observer) that could never be collected.
+    function destroyChartsIn(container) {
+        if (!container || typeof Chart === 'undefined') return;
+        container.querySelectorAll('canvas').forEach(canvas => {
+            const existing = Chart.getChart(canvas);
+            if (existing) existing.destroy();
+        });
+    }
+
     // Load default market data
     function loadDefaultMarkets(location = 'US') {
         const defaultMarketsContainer = document.getElementById('defaultMarketsContainer');
         const defaultMarketsSection = document.getElementById('defaultMarketsSection');
 
         if (!defaultMarketsContainer || !defaultMarketsSection) return;
+
+        destroyChartsIn(defaultMarketsContainer);
 
         // Show loading state
         defaultMarketsContainer.innerHTML = `
@@ -355,11 +371,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderVolumeLiquidity(data) {
         const canvas = document.getElementById('volumeLiquidityChart');
         const summary = document.getElementById('volumeSummary');
-        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(data?.chart_data)) return;
 
+        // Destroy before the bail-out, not after: otherwise a symbol with no
+        // usable chart_data leaves the previous symbol's bars on screen.
         if (volumeLiquidityChart) {
             volumeLiquidityChart.destroy();
+            volumeLiquidityChart = null;
         }
+
+        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(data?.chart_data)) return;
 
         const bars = data.chart_data.map((item, index) => {
             const close = Number(item.price || item.close || 0);
@@ -426,11 +446,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('sentimentTimelineChart');
         const summary = document.getElementById('sentimentDivergence');
         const timeline = data?.sentiment_timeline || [];
-        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(timeline)) return;
 
+        // Same ordering rationale as renderVolumeLiquidity above.
         if (sentimentTimelineChart) {
             sentimentTimelineChart.destroy();
+            sentimentTimelineChart = null;
         }
+
+        if (!canvas || typeof Chart === 'undefined' || !Array.isArray(timeline)) return;
 
         const scoreData = timeline.map(item => ({ x: new Date(item.date), y: Number(item.score || 0) }));
         const countData = timeline.map(item => ({ x: new Date(item.date), y: Number(item.headline_count || 0) }));
@@ -486,13 +509,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const rows = indicatorPayload?.indicators || [];
         if (panel) panel.style.display = '';
         if (togglePanel) togglePanel.style.display = '';
+
+        // Tear the previous symbol's chart down before deciding whether we can
+        // draw a new one. Bailing out first left the last symbol's RSI/MACD on
+        // screen under an "unavailable" caption whenever /api/indicators
+        // failed or returned nothing — i.e. showing one stock's indicators on
+        // another stock's page.
+        if (indicatorMomentumChart) {
+            indicatorMomentumChart.destroy();
+            indicatorMomentumChart = null;
+        }
+
         if (!rows.length || !canvas || typeof Chart === 'undefined') {
             if (summary) summary.textContent = 'Indicators unavailable for the current series.';
             return;
-        }
-
-        if (indicatorMomentumChart) {
-            indicatorMomentumChart.destroy();
         }
 
         const latest = indicatorPayload.latest || rows[rows.length - 1] || {};

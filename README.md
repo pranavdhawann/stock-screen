@@ -4,7 +4,7 @@
 
 **A free, open-source Bloomberg-style terminal for stock sentiment, news, SEC filings, and AI forecasting.**
 
-Type a ticker. Get a verdict — bullish/bearish signal, catalysts, risks, filing summaries, and an LSTM price forecast — in seconds.
+Type a ticker. Get a verdict — bullish/bearish signal, catalysts, risks, filing summaries, and an AI price forecast — in seconds.
 
 [![Live Demo](https://img.shields.io/badge/▶_Live_Demo-stock--screen-FFD700?style=for-the-badge)](https://stock-screen-25476982226.us-central1.run.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
@@ -25,9 +25,9 @@ Institutional traders get Bloomberg terminals. Retail investors get twelve brows
 | | Feature | What you get |
 |---|---|---|
 | 🧠 | **AI Sentiment Verdicts** | Every headline scored by an LLM (Groq Llama 3.3 70B), rolled up into a bullish/bearish/neutral signal with confidence, catalysts, and risks — with a finance-lexicon fallback so the app never goes blank |
-| 📰 | **Multi-Source News Wire** | Yahoo Finance, Google News RSS, MarketWatch, Finnhub, NewsAPI, Alpha Vantage, and Currents — deduplicated, relevance-ranked, merged into one feed |
+| 📰 | **Multi-Source News Wire** | Yahoo Finance, Google News RSS, MarketWatch, Finnhub, NewsAPI, and Alpha Vantage — deduplicated, relevance-ranked, merged into one feed |
 | 🏛️ | **Filing Intelligence** | SEC EDGAR (10-K / 10-Q / 8-K) **and** Indian BSE/NSE disclosures, with AI summaries, filing timelines, and cadence stats |
-| 🔮 | **LSTM Price Forecasts** | A bundled PyTorch model turns 60 days of OHLCV into a 5-day projection with confidence bands, bull/bear cases, and backtest MAE |
+| 🔮 | **AI Price Forecasts** | A bundled deep-learning model turns 60 days of OHLCV into a 5-day projection with confidence bands, bull/bear cases, and backtest MAE |
 | 📊 | **Live Terminal UI** | Ticker tape, market movers with sparklines, world clocks, technical overlays (SMA/EMA/Bollinger/RSI/MACD), sentiment-vs-price divergence |
 | 🌏 | **Two Markets** | US (NYSE/Nasdaq) and India (NSE/BSE) with the right currency, indices, and filing sources per market |
 | ⭐ | **Accounts & Watchlists** | Free sign-in (email + password, server-side sessions) with a personal watchlist that follows you across devices — one click to watch any stock from its analysis page |
@@ -58,7 +58,7 @@ Open http://127.0.0.1:5000 — market data and news work out of the box with **z
 | `GROQ_API_KEY` | AI sentiment, insights, filing summaries | Recommended (free tier works) |
 | `SECRET_KEY` | Session security | Required in production |
 | `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` | Persistent cache + durable rate limits | Optional (falls back to in-memory) |
-| `FINNHUB_API_KEY`, `NEWSAPI_KEY`, `ALPHAVANTAGE_API_KEY`, `CURRENTS_API_KEY` | Extra news sources | Optional |
+| `FINNHUB_API_KEY`, `NEWSAPI_KEY`, `ALPHAVANTAGE_API_KEY` | Extra news sources | Optional |
 | `EMAILJS_SERVICE_ID` / `_TEMPLATE_ID` / `_PUBLIC_KEY` | Contact form delivery | Optional |
 | `SEC_EDGAR_USER_AGENT` | Identifies you to SEC EDGAR (their policy) | Recommended |
 
@@ -85,7 +85,7 @@ flowchart LR
 - **Hybrid caching** — reads hit an in-memory TTL cache first, then Supabase, then the network. Writes persist to Supabase on a background worker so requests never wait. Without Supabase credentials everything degrades gracefully to memory-only.
 - **Durable quotas** — expensive endpoints (AI analysis, forecasts, contact) are rate-limited through a Postgres RPC with advisory locks, so limits survive restarts and hold across instances. A pg_cron job prunes expired cache and quota rows hourly.
 - **Graceful degradation** — no Groq key (or a tripped key) falls back to a finance-tuned lexicon analyzer and extractive summaries via a process-wide circuit breaker.
-- **Hardened by default** — CSP with per-request script nonces, SRI-pinned CDNs, strict security headers, SSRF-safe filing-URL allowlists, honeypot contact form, and a 2400-line regression/security test suite.
+- **Hardened by default** — CSP with per-request script nonces, SRI-pinned CDNs, strict security headers, SSRF-safe filing-URL allowlists, honeypot contact form, and a 3300-line regression/security test suite.
 
 ```
 app/             Flask routes, services, config
@@ -101,7 +101,7 @@ Public-demo budgets, enforced server-side per client:
 
 | Bucket | Endpoints | Limit |
 |---|---|---|
-| `public_news` | `/api/news`, `/api/currents_news`, `/api/finnhub_news` | 60/hour |
+| `public_news` | `/api/news`, `/api/market_news`, `/api/finnhub_news` | 60/hour |
 | AI buckets | `/api/analyze_sentiment`, `/api/indicators/*`, filing summaries/overviews | 20/hour |
 | `forecast` | `/api/forecast` | 1 per 30 days |
 | `contact` | `/api/contact` | 5/hour |
@@ -113,7 +113,7 @@ Source code proves which providers are wired and how they're limited; check each
 ## Tests
 
 ```bash
-python -m pytest -q          # 130 regression + security tests
+python -m pytest -q          # 197 regression + security tests
 python -m compileall app lstm
 ```
 
@@ -162,7 +162,7 @@ Rotate any key that was ever configured as a plain env var before relying on Sec
 
 - [x] Multi-source news + AI sentiment verdicts
 - [x] SEC EDGAR + BSE/NSE filing intelligence
-- [x] LSTM forecasting with confidence bands
+- [x] AI forecasting with confidence bands
 - [x] Accounts + cross-device watchlists
 - [ ] Watchlist alerts (sentiment flips, volume spikes)
 - [ ] Pro tier — higher forecast quotas and deeper history (waitlist-backed)

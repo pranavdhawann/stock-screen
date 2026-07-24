@@ -11,7 +11,10 @@
     var utils = window.StockScreenUtils || {};
     var fetchJson = utils.fetchJson;
 
-    if (!modal || !form || !successEl || !errorEl || !submitBtn) return;
+    // fetchJson is guarded alongside the DOM lookups: utils.js is loaded
+    // before this file in base.html, but a load failure there would otherwise
+    // surface as a TypeError inside the submit handler rather than a no-op.
+    if (!modal || !form || !successEl || !errorEl || !submitBtn || !fetchJson) return;
 
     function fieldValue(id) {
         var el = document.getElementById(id);

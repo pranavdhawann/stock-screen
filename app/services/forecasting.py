@@ -22,6 +22,32 @@ ROOT = Path(__file__).resolve().parents[2]
 LSTM_ROOT = ROOT / "lstm"
 CHECKPOINT_PATH = LSTM_ROOT / "model.pt"
 
+# Cap torch's intra-op parallelism.
+#
+# By default torch sizes its own thread pool to the machine's core count and
+# fans a single forward pass across all of them. Inside a gunicorn worker
+# serving 8 request threads that is actively harmful: one forecast saturates
+# every vCPU the container has, stalling unrelated requests, and the threads
+# spend more time in scheduler contention than in useful work. These models
+# are small enough that a single-threaded forward pass is not meaningfully
+# slower, and it leaves the box responsive.
+#
+# TORCH_NUM_THREADS can raise it if a future instance is given more CPU.
+def _configure_torch_threads():
+    import os
+
+    try:
+        threads = int(os.environ.get("TORCH_NUM_THREADS", "1"))
+    except (TypeError, ValueError):
+        threads = 1
+    try:
+        torch.set_num_threads(max(1, threads))
+    except Exception as exc:  # pragma: no cover - platform dependent
+        logger.debug("Could not set torch thread count: %s", exc)
+
+
+_configure_torch_threads()
+
 _artifacts = None
 _lock = RLock()
 SAFE_CHECKPOINT_GLOBALS = [

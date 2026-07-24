@@ -52,3 +52,45 @@ def consume_limit(bucket, limit, window_seconds, *, distributed=True):
     if not result.allowed:
         return jsonify(rate_limit_payload(result)), 429
     return None
+
+
+def consume_tiered_limit(
+    bucket,
+    *,
+    burst_limit,
+    burst_window_seconds,
+    quota_limit,
+    quota_window_seconds,
+):
+    """Cheap per-instance burst guard in front of a durable shared quota.
+
+    An in-memory-only limit is per *container*: once Cloud Run scales to N
+    instances the effective ceiling becomes N x the configured number, because
+    each instance counts independently. That is fine for anti-hammering but
+    wrong for anything meant to be a real quota.
+
+    Making every bucket distributed instead would put a Supabase round-trip in
+    front of responses that otherwise serve straight out of the in-memory
+    cache. So both run, cheapest first: the local burst window rejects
+    hammering with no network at all, and only requests that clear it spend a
+    round-trip on the durable quota.
+
+    A request that passes the burst check but fails the quota still consumes a
+    burst token. That is deliberate - it makes repeatedly probing a
+    quota-exhausted endpoint get *more* expensive, not less.
+    """
+    key = client_key()
+
+    burst = check_limit(
+        f"{bucket}_burst", key, burst_limit, burst_window_seconds, distributed=False
+    )
+    if not burst.allowed:
+        return jsonify(rate_limit_payload(burst)), 429
+
+    quota = check_limit(
+        bucket, key, quota_limit, quota_window_seconds, distributed=True
+    )
+    if not quota.allowed:
+        return jsonify(rate_limit_payload(quota)), 429
+
+    return None

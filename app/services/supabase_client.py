@@ -128,14 +128,6 @@ def set_sec_filings_cache(key: str, value: Any):
     return _set_cache("sec_filings_cache", "cache_key", key, "data", value, 1800)
 
 
-def get_currents_cache():
-    return _get_cache("currents_news_cache", "cache_key", "latest", "news_items", include_metadata=True)
-
-
-def set_currents_cache(news_items):
-    return _set_cache("currents_news_cache", "cache_key", "latest", "news_items", news_items, 8640)
-
-
 def get_finnhub_cache(symbol: str):
     return _get_cache("finnhub_news_cache", "symbol", symbol.upper(), "news_items", include_metadata=True)
 
@@ -172,7 +164,10 @@ def record_sentiment_snapshot(
         ).execute()
         return True
     except Exception as exc:
-        logger.warning("Sentiment history write failed for %s: %s", symbol, exc)
+        # Escalated to error (was warning): a silent history-write failure
+        # here means sentiment history never persists, with no visible
+        # signal - worth the noisier log level and full traceback.
+        logger.error("Sentiment history write failed for %s: %s", symbol, exc, exc_info=True)
         return False
 
 
@@ -193,7 +188,10 @@ def get_sentiment_history(symbol: str, days: int = 30) -> list:
         )
         return getattr(result, "data", None) or []
     except Exception as exc:
-        logger.warning("Sentiment history read failed for %s: %s", symbol, exc)
+        # Escalated to error (was warning) - same rationale as the write
+        # path above: a swallowed read failure here silently blanks the
+        # sentiment history timeline.
+        logger.error("Sentiment history read failed for %s: %s", symbol, exc, exc_info=True)
         return []
 
 
@@ -261,6 +259,35 @@ def create_user(email: str, password_hash: str):
             raise DuplicateEmailError(email) from exc
         logger.warning("User creation failed: %s", exc)
         return None
+
+
+def add_waitlist_email(email: str) -> str:
+    """Record a request for paid-tier access in public.waitlist.
+
+    Returns one of:
+      "added"       - a new row was inserted
+      "duplicate"   - the address was already on the list
+      "unavailable" - Supabase is not configured, or the write failed
+
+    Relies on the waitlist_email_key unique constraint rather than a prior
+    SELECT, for the same reason create_user() does: a check-then-insert races
+    two concurrent submissions of the same address.
+
+    Callers must not surface "duplicate" differently from "added" - the
+    waitlist holds real people's addresses, and a distinguishable response
+    turns this into a membership oracle.
+    """
+    client = _get_client()
+    if not client:
+        return "unavailable"
+    try:
+        client.table("waitlist").insert({"email": email.strip().lower()}).execute()
+        return "added"
+    except Exception as exc:
+        if _is_unique_violation(exc):
+            return "duplicate"
+        logger.error("Waitlist insert failed: %s", exc, exc_info=True)
+        return "unavailable"
 
 
 def touch_user_login(user_id: str) -> None:

@@ -160,6 +160,8 @@
 </div>
 {% endblock %}
 
+{% block chart_libs %}{% include 'partials/chart_libs.html' %}{% endblock %}
+
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/sec-filings-page.js') }}"></script>
 {% endblock %}

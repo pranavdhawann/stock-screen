@@ -26,9 +26,25 @@ RUN useradd --create-home --shell /bin/bash appuser && \
 USER appuser
 
 # Environment (PORT is set by Cloud Run at runtime)
+#
+# GUNICORN_WORKERS/THREADS are read by the CMD below so the process model can
+# be retuned from the Cloud Run console without rebuilding the image. The
+# default stays 1 worker: torch, pandas and scikit-learn are all resident, so
+# a second worker roughly doubles the memory floor - raise it only alongside
+# the instance's memory limit.
+#
+# OMP/MKL thread caps match app/services/forecasting.py's torch.set_num_threads
+# call. Without them the math libraries spin up a thread per core underneath
+# torch, which on a small Cloud Run instance means heavy contention rather
+# than speed.
 ENV FLASK_APP=wsgi.py \
     FLASK_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    GUNICORN_WORKERS=1 \
+    GUNICORN_THREADS=8 \
+    TORCH_NUM_THREADS=1 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1
 
 EXPOSE 8080
 
@@ -41,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/ping')" || exit 1
 
 # Gunicorn production server
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 120 wsgi:app
+CMD exec gunicorn --bind :$PORT --workers $GUNICORN_WORKERS --threads $GUNICORN_THREADS --timeout 120 wsgi:app

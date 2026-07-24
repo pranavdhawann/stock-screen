@@ -36,3 +36,8 @@ def sec_filings():
 @main_bp.route('/forecasting')
 def forecasting():
     return render_template('forecasting.html')
+
+
+@main_bp.route('/track-news')
+def track_news():
+    return render_template('track_news.html')

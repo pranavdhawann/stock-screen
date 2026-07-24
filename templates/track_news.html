@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Track News - Stock Screen{% endblock %}
+
+{% block seo %}
+<meta name="description" content="Follow real-time general market headlines and finance wire news, server-cached and updated continuously.">
+<meta property="og:title" content="Track News - Stock Screen">
+<meta property="og:description" content="Real-time general market headlines and finance wire news, server-cached and updated continuously.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Stock Screen">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Track News - Stock Screen">
+<meta name="twitter:description" content="Real-time general market headlines and finance wire news, server-cached and updated continuously.">
+{% endblock %}
+
+{% block content %}
+<div class="title-section">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-10">
+                <h1 class="main-title" id="trackNewsPageTitle">TRACK NEWS</h1>
+                <p class="main-subtitle" id="trackNewsPageSubtitle">
+                    Market wire headlines from across US and India markets
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-uppercase fw-bold mb-0 idx-section-label">
+                    MARKET WIRE
+                </h4>
+                <span id="trackNewsUpdated" class="idx-updated-label"></span>
+            </div>
+            <div class="card">
+                <div class="card-body p-0">
+                    <div id="trackNewsContainer" class="news-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/track-news.js') }}"></script>
+{% endblock %}

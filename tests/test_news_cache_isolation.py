@@ -140,9 +140,10 @@ class TestCacheIsolation:
         # Result should be the original input (unchanged)
         assert result is sample_news_items
 
-        # Verify no _relevance key was added
-        for item in result:
+        # Verify no _relevance key was added, and nothing else was rewritten
+        for idx, item in enumerate(result):
             assert '_relevance' not in item
+            assert item == original_items[idx], f"Input item {idx} was mutated"
 
     def test_empty_groq_response_no_mutation(self, sample_news_items):
         """Verify that empty or unparseable Groq response doesn't mutate items."""
@@ -194,8 +195,9 @@ class TestCacheIsolation:
 
         # Should return original items unchanged
         assert result is sample_news_items
-        for item in result:
+        for idx, item in enumerate(result):
             assert '_relevance' not in item
+            assert item == original_items[idx], f"Input item {idx} was mutated"
 
     def test_empty_news_items_no_mutation(self):
         """Verify that empty input is handled correctly."""

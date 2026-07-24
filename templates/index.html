@@ -49,9 +49,8 @@
                             MARKET OVERVIEW
                         </h4>
                         <div class="terminal-statusline" id="terminalStatusline">
-                            <span class="status-clock"><span class="status-clock-label">NY</span> <span id="clockNY">--:--:--</span></span>
-                            <span class="status-clock"><span class="status-clock-label">LDN</span> <span id="clockLDN">--:--:--</span></span>
-                            <span class="status-clock"><span class="status-clock-label">MUM</span> <span id="clockMUM">--:--:--</span></span>
+                            <span class="status-clock"><span class="status-clock-label">USA</span> <span id="clockUSA">--:--:--</span></span>
+                            <span class="status-clock"><span class="status-clock-label">INDIA</span> <span id="clockIndia">--:--:--</span></span>
                             <span class="status-clock"><span class="status-clock-label">SRC</span> YAHOO FIN</span>
                         </div>
                     </div>
@@ -60,6 +59,55 @@
                     <div id="defaultMarketsSection">
                         <div class="markets-grid" id="defaultMarketsContainer">
                             <!-- Default market data will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Track a Stock -->
+                    <div class="mt-4">
+                        <div class="card card-enhanced search-overlay-card">
+                            <div class="card-body p-4 p-lg-5">
+                                <h4 class="text-uppercase fw-bold mb-1 idx-section-label">
+                                    TRACK A STOCK
+                                </h4>
+                                <p class="mb-4 idx-muted-072">
+                                    Search for a stock and get insight
+                                </p>
+                                <form id="sentimentForm" class="mb-3">
+                                    <div class="search-box-enhanced">
+                                        <div class="input-group input-group-xl">
+                                            <span class="input-group-text search-icon">
+
+                                            </span>
+                                            <input type="text"
+                                                   class="form-control search-input"
+                                                   id="stockSearch"
+                                                   placeholder="Enter stock symbol or company name (e.g., AAPL, TSLA, Microsoft)"
+                                                   autocomplete="off"
+                                                   data-bs-toggle="dropdown"
+                                                   data-bs-auto-close="false">
+                                        </div>
+                                        <div class="dropdown-menu w-100" id="sampleStocksDropdown">
+                                            <div id="usStocksSection"></div>
+                                            <div id="indianStocksSection" class="idx-hidden"></div>
+                                        </div>
+                                        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                                    </div>
+                                </form>
+                                <div id="quickSuggestions" class="idx-quick-suggestions">
+                                    <span class="idx-popular-label">POPULAR:</span>
+                                    <span class="quick-pick idx-quick-pick-first" data-symbol="AAPL">AAPL</span>
+                                    <span class="idx-quick-sep">|</span>
+                                    <span class="quick-pick idx-quick-pick" data-symbol="TSLA">TSLA</span>
+                                    <span class="idx-quick-sep">|</span>
+                                    <span class="quick-pick idx-quick-pick" data-symbol="MSFT">MSFT</span>
+                                    <span class="idx-quick-sep">|</span>
+                                    <span class="quick-pick idx-quick-pick" data-symbol="GOOGL">GOOGL</span>
+                                    <span class="idx-quick-sep">|</span>
+                                    <span class="quick-pick idx-quick-pick" data-symbol="AMZN">AMZN</span>
+                                    <span class="idx-quick-sep">|</span>
+                                    <span class="quick-pick idx-quick-pick" data-symbol="NVDA">NVDA</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -114,7 +162,7 @@
                                 <div class="table-responsive">
                                     <table class="movers-table" id="watchlistTable">
                                         <tbody id="watchlistTableBody">
-                                            <tr><td class="text-center py-3 idx-muted-072">
+                                            <tr><td colspan="6" class="text-center py-3 idx-muted-072">
                                                 Sign in to build a watchlist that follows you across devices.
                                             </td></tr>
                                         </tbody>
@@ -124,69 +172,6 @@
                         </div>
                     </div>
 
-                    <!-- Market Wire (general finance headlines, server-cached) -->
-                    <div class="mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4 class="text-uppercase fw-bold mb-0 idx-section-label">
-                                MARKET WIRE
-                            </h4>
-                            <span id="headlinesLastUpdated" class="idx-updated-label"></span>
-                        </div>
-                        <div class="card">
-                            <div class="card-body p-0">
-                                <div id="marketHeadlines" class="news-container"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Stock Search -->
-                    <div class="mt-4">
-                        <div class="card card-enhanced search-overlay-card">
-                            <div class="card-body p-4 p-lg-5">
-                                <h4 class="text-uppercase fw-bold mb-1 idx-section-label">
-                                    NEWS BAR
-                                </h4>
-                                <p class="mb-4 idx-muted-072">
-                                    Search for a stock and get insight
-                                </p>
-                                <form id="sentimentForm" class="mb-3">
-                                    <div class="search-box-enhanced">
-                                        <div class="input-group input-group-xl">
-                                            <span class="input-group-text search-icon">
-                                                
-                                            </span>
-                                            <input type="text"
-                                                   class="form-control search-input"
-                                                   id="stockSearch"
-                                                   placeholder="Enter stock symbol or company name (e.g., AAPL, TSLA, Microsoft)"
-                                                   autocomplete="off"
-                                                   data-bs-toggle="dropdown"
-                                                   data-bs-auto-close="false">
-                                        </div>
-                                        <div class="dropdown-menu w-100" id="sampleStocksDropdown">
-                                            <div id="usStocksSection"></div>
-                                            <div id="indianStocksSection" class="idx-hidden"></div>
-                                        </div>
-                                        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
-                                    </div>
-                                </form>
-                                <div id="quickSuggestions" class="idx-quick-suggestions">
-                                    <span class="idx-popular-label">POPULAR:</span>
-                                    <span class="quick-pick idx-quick-pick-first" data-symbol="AAPL">AAPL</span>
-                                    <span class="idx-quick-sep">|</span>
-                                    <span class="quick-pick idx-quick-pick" data-symbol="TSLA">TSLA</span>
-                                    <span class="idx-quick-sep">|</span>
-                                    <span class="quick-pick idx-quick-pick" data-symbol="MSFT">MSFT</span>
-                                    <span class="idx-quick-sep">|</span>
-                                    <span class="quick-pick idx-quick-pick" data-symbol="GOOGL">GOOGL</span>
-                                    <span class="idx-quick-sep">|</span>
-                                    <span class="quick-pick idx-quick-pick" data-symbol="AMZN">AMZN</span>
-                                    <span class="idx-quick-sep">|</span>
-                                    <span class="quick-pick idx-quick-pick" data-symbol="NVDA">NVDA</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -211,11 +196,6 @@
                                         BACK
                                     </button>
                                 </div>
-                            </div>
-
-                            <!-- Loading Spinner -->
-                            <div id="loadingSpinner" class="text-center d-none py-3">
-                                <span class="terminal-cursor">ANALYZING</span>
                             </div>
 
                             <!-- Progress Bar -->
@@ -349,6 +329,8 @@
 
 </div>
 {% endblock %}
+
+{% block chart_libs %}{% include 'partials/chart_libs.html' %}{% endblock %}
 
 {% block extra_scripts %}
 <!--
