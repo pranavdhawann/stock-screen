@@ -46,6 +46,48 @@ SEC_EDGAR_HEADERS = {
 }
 SEC_FILINGS_TTL = 1800  # 30 minutes
 
+# Pro plan catalogue.
+#
+# Checkout is not processed in-app. A request records the intent (plan +
+# email) in public.pro_payment_requests and hands back a hosted checkout URL
+# when one is configured - a Stripe Payment Link, a Razorpay page, whatever
+# the operator sets. With no URL configured the request is still recorded and
+# the user is told the link will be emailed, so the flow degrades cleanly
+# before a payment provider is wired up.
+#
+# Prices are strings on purpose: they are display copy only, never used in a
+# calculation, and the app never sees a real amount.
+def _plan_link(env_name):
+    """A checkout URL from the environment, or '' if it isn't a usable one.
+
+    Anything that isn't plain https is dropped rather than handed to a
+    browser: this value ends up in an href, so a javascript: or data: URL
+    misconfigured here would be a stored-XSS vector on every visitor who
+    asks for a link.
+    """
+    value = os.environ.get(env_name, '').strip()
+    return value if value.lower().startswith('https://') else ''
+
+
+PRO_PLANS = [
+    {
+        'code': 'pro_monthly',
+        'name': 'Pro Monthly',
+        'price': os.environ.get('PRO_MONTHLY_PRICE', '$19 / month'),
+        'summary': 'Billed monthly. Cancel any time.',
+        'payment_link': _plan_link('PRO_MONTHLY_PAYMENT_LINK'),
+    },
+    {
+        'code': 'pro_annual',
+        'name': 'Pro Annual',
+        'price': os.environ.get('PRO_ANNUAL_PRICE', '$190 / year'),
+        'summary': 'Billed yearly — two months free.',
+        'payment_link': _plan_link('PRO_ANNUAL_PAYMENT_LINK'),
+    },
+]
+
+PRO_PLANS_BY_CODE = {plan['code']: plan for plan in PRO_PLANS}
+
 # EmailJS Configuration (server-side contact form)
 EMAILJS_SERVICE_ID = os.environ.get('EMAILJS_SERVICE_ID', '')
 EMAILJS_TEMPLATE_ID = os.environ.get('EMAILJS_TEMPLATE_ID', '')

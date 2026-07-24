@@ -159,13 +159,13 @@ def test_has_extra_sources_is_gone():
     assert not hasattr(news_aggregator, "has_extra_sources")
 
 
-# --- Issue 5: Track News response ordering ------------------------------------
+# --- Issue 5: Market Wire response ordering -----------------------------------
 
-def test_track_news_ignores_out_of_order_responses():
+def test_market_wire_ignores_out_of_order_responses():
     """Toggling US->IN quickly could render the slower US response last."""
     from pathlib import Path
 
-    source = Path(__file__).resolve().parents[1] / "static" / "js" / "track-news.js"
+    source = Path(__file__).resolve().parents[1] / "static" / "js" / "market-wire.js"
     text = source.read_text(encoding="utf-8")
 
     assert "requestToken" in text, "each fetch needs a token to detect staleness"

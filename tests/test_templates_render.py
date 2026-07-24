@@ -8,7 +8,7 @@ whole suite stayed green. These tests walk the real routes.
 import pytest
 
 
-PAGES = ["/", "/sec-filings", "/forecasting", "/track-news", "/about"]
+PAGES = ["/", "/sec-filings", "/forecasting", "/track", "/about"]
 
 # Pages that draw charts and therefore must pull in Chart.js; everything else
 # must NOT, since that is the point of base.html's chart_libs block.
@@ -58,12 +58,71 @@ def test_no_font_awesome_or_cdnjs_references_remain(client, path):
 
 
 @pytest.mark.parametrize("path", PAGES)
-def test_waitlist_cta_and_modal_are_available_site_wide(client, path):
+def test_pro_cta_and_modal_are_available_site_wide(client, path):
     body = client.get(path).get_data(as_text=True)
 
     assert 'data-action="open-waitlist-modal"' in body
     assert 'id="waitlistModal"' in body
-    assert "js/waitlist-modal.js" in body
+    assert "js/pro-modal.js" in body
+    # The modal must offer a plan picker, not just an email capture.
+    assert 'id="wlPlanOptions"' in body
+
+
+def test_track_news_url_still_resolves(client):
+    """The page moved from /track-news to /track; old links must not 404."""
+    response = client.get("/track-news")
+
+    assert response.status_code == 301
+    assert response.headers["Location"].endswith("/track")
+
+
+def test_track_page_shows_market_wire_above_track_a_stock(client):
+    body = client.get("/track").get_data(as_text=True)
+
+    assert "MARKET WIRE" in body
+    assert "TRACK A STOCK" in body
+    assert body.index("MARKET WIRE") < body.index("TRACK A STOCK")
+
+
+def test_track_page_has_no_stock_news_section(client):
+    """The per-ticker Stock News feed was removed from the page."""
+    body = client.get("/track").get_data(as_text=True)
+
+    assert "STOCK NEWS" not in body
+    assert 'id="stockNewsContainer"' not in body
+
+
+def test_market_wire_offers_a_load_more_control(client):
+    body = client.get("/track").get_data(as_text=True)
+
+    assert 'id="marketWireMoreBtn"' in body
+
+
+def test_market_wire_starts_with_five_headlines():
+    """The wire opens short; the rest is behind LOAD MORE."""
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[1] / "static" / "js" / "market-wire.js"
+    text = source.read_text(encoding="utf-8")
+
+    assert "const PAGE_SIZE = 5;" in text
+
+
+def test_the_search_box_lives_on_track_not_markets(client):
+    """"Track a Stock" moved off the Markets page; only one page owns it."""
+    markets = client.get("/").get_data(as_text=True)
+    track = client.get("/track").get_data(as_text=True)
+
+    assert 'id="stockSearch"' not in markets
+    assert 'id="stockSearch"' in track
+
+
+def test_nav_lists_track_second(client):
+    body = client.get("/").get_data(as_text=True)
+    links = body[body.index('id="navLinks"'):body.index('class="nav-actions"')]
+    labels = [line.strip() for line in links.splitlines() if line.strip().startswith("<span>")]
+
+    assert labels[:2] == ["<span>Markets</span>", "<span>Track</span>"]
 
 
 def test_forecasting_page_says_ai_not_lstm(client):

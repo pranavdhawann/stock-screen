@@ -61,6 +61,8 @@ Open http://127.0.0.1:5000 — market data and news work out of the box with **z
 | `FINNHUB_API_KEY`, `NEWSAPI_KEY`, `ALPHAVANTAGE_API_KEY` | Extra news sources | Optional |
 | `EMAILJS_SERVICE_ID` / `_TEMPLATE_ID` / `_PUBLIC_KEY` | Contact form delivery | Optional |
 | `SEC_EDGAR_USER_AGENT` | Identifies you to SEC EDGAR (their policy) | Recommended |
+| `PRO_MONTHLY_PAYMENT_LINK`, `PRO_ANNUAL_PAYMENT_LINK` | Hosted checkout URL returned when a visitor requests a Pro payment link | Optional |
+| `PRO_MONTHLY_PRICE`, `PRO_ANNUAL_PRICE` | Display price for each Pro plan | Optional (defaults shown in-app) |
 
 All variables are documented in [`.env.example`](.env.example). `MAX_CONTENT_LENGTH` (default 1 MiB) caps request bodies; an invalid value falls back to the default rather than failing startup.
 
@@ -107,13 +109,14 @@ Public-demo budgets, enforced server-side per client:
 | `contact` | `/api/contact` | 5/hour |
 | `auth_signup` / `auth_login` | `/api/auth/*` | 5/hour · 10 per 15 min |
 | `watchlist` | `/api/watchlist` mutations | 60/hour |
+| `pro_request` | `/api/pro/payment-link` | 5/hour |
 
 Source code proves which providers are wired and how they're limited; check each vendor dashboard for the connected account's plan.
 
 ## Tests
 
 ```bash
-python -m pytest -q          # 197 regression + security tests
+python -m pytest -q          # 225 regression + security tests
 python -m compileall app lstm
 ```
 
@@ -164,8 +167,9 @@ Rotate any key that was ever configured as a plain env var before relying on Sec
 - [x] SEC EDGAR + BSE/NSE filing intelligence
 - [x] AI forecasting with confidence bands
 - [x] Accounts + cross-device watchlists
+- [x] Pro plan catalogue + payment-link requests
 - [ ] Watchlist alerts (sentiment flips, volume spikes)
-- [ ] Pro tier — higher forecast quotas and deeper history (waitlist-backed)
+- [ ] Self-serve Pro checkout (automatic entitlement on payment)
 - [ ] More markets and symbols
 
 Have an idea? [Open a feature request](https://github.com/pranavdhawann/stock-screen/issues/new/choose).

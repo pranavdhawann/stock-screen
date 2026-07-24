@@ -40,7 +40,9 @@
     --text-secondary: #999;
     --text-muted: #666;
 
-    /* Navigation */
+    /* Navigation — width applies to the right-hand rail (>=769px),
+       height to the mobile top bar it collapses into. */
+    --nav-width: 180px;
     --nav-height: 40px;
 
     /* Radii — near-zero for terminal look */
@@ -167,43 +169,54 @@ body::after {
 }
 
 /* ============================================================
-   TOP NAVIGATION BAR — Terminal status bar
+   SIDE NAVIGATION RAIL — Terminal status column, right-hand side
+   Collapses back to a full-width top bar at <=768px (see the mobile
+   block further down), which is why --nav-height still exists.
    ============================================================ */
-.top-nav {
+.side-nav {
     position: fixed;
     top: 0;
-    left: 0;
     right: 0;
-    height: var(--nav-height);
+    bottom: 0;
+    width: var(--nav-width);
     background: var(--bg-primary);
-    border-bottom: 1px solid var(--border);
+    border-left: 1px solid var(--border);
     z-index: var(--z-nav);
+    overflow-y: auto;
 }
 
-.top-nav-inner {
+.side-nav-inner {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     height: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 0 16px;
-    gap: 24px;
+    padding: 16px 12px;
+    gap: 20px;
+}
+
+.nav-brand {
+    display: block;
+    color: var(--accent-amber);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0 10px;
 }
 
 .nav-links {
     display: flex;
-    align-items: center;
-    gap: 0;
-    justify-content: center;
-    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
 }
 
 .nav-link-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 8px 10px;
     color: var(--text-muted);
     text-decoration: none;
     font-family: var(--font-mono);
@@ -211,34 +224,28 @@ body::after {
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border-bottom: 1px solid transparent;
-    transition: color var(--transition-fast);
+    border-left: 2px solid transparent;
+    transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .nav-link-item:hover {
     color: var(--accent-amber);
+    background: rgba(255, 165, 0, 0.06);
 }
 
 .nav-link-item.active {
     color: var(--accent-amber);
-    border-bottom-color: var(--accent-amber);
+    border-left-color: var(--accent-amber);
+    background: rgba(255, 165, 0, 0.08);
 }
 
-.nav-link-item i {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.nav-link-item:hover i,
-.nav-link-item.active i {
-    color: var(--accent-amber);
-}
-
+/* Pushed to the bottom of the rail so the links stay grouped at the top. */
 .nav-actions {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
-    justify-content: center;
+    margin-top: auto;
 }
 
 /* Connection status indicator */
@@ -389,8 +396,9 @@ body::after {
    ============================================================ */
 .main-content {
     margin-left: 0;
-    margin-top: var(--nav-height);
-    min-height: calc(100vh - var(--nav-height));
+    margin-right: var(--nav-width);
+    margin-top: 0;
+    min-height: 100vh;
     padding: 0;
 }
 
@@ -474,11 +482,8 @@ body::after {
 /* Nav tab active state (used by JS tab switcher on home page) */
 .nav-link-item.nav-tab-active {
     color: var(--accent-amber);
-    border-bottom-color: var(--accent-amber);
-}
-
-.nav-link-item.nav-tab-active i {
-    color: var(--accent-amber);
+    border-left-color: var(--accent-amber);
+    background: rgba(255, 165, 0, 0.08);
 }
 
 /* Quick-pick stock suggestions */
@@ -663,7 +668,8 @@ body::after {
     border-bottom: none;
 }
 
-.autocomplete-item:hover {
+.autocomplete-item:hover,
+.autocomplete-item.autocomplete-item-active {
     background: rgba(255, 165, 0, 0.1);
     color: var(--accent-amber);
     border-left-color: var(--accent-amber);
@@ -924,6 +930,33 @@ body::after {
     flex-direction: column;
     gap: 0;
     margin-top: 12px;
+}
+
+/* Market Wire pagination footer */
+.news-more-row {
+    display: flex;
+    justify-content: center;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+}
+
+.news-more-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 6px 18px;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.news-more-btn:hover {
+    color: var(--accent-amber);
+    border-color: var(--accent-amber);
 }
 
 .news-item {
@@ -1379,10 +1412,6 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.1em;
 }
 
-.modal-backdrop {
-    background: rgba(0, 0, 0, 0.7);
-}
-
 .btn-close {
     filter: invert(1) grayscale(100%) brightness(200%);
     opacity: 0.6;
@@ -1397,14 +1426,6 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 .bg-dark {
     background: var(--bg-primary) !important;
-}
-
-.border {
-    border-color: var(--border) !important;
-}
-
-.border-bottom {
-    border-color: var(--border) !important;
 }
 
 hr {
@@ -1430,9 +1451,36 @@ hr {
    RESPONSIVE — Mobile (max-width: 768px)
    ============================================================ */
 @media (max-width: 768px) {
-    .top-nav-inner {
+    /* The rail becomes a conventional top bar: a 180px column would eat
+       half a phone screen. */
+    .side-nav {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        width: auto;
+        height: var(--nav-height);
+        border-left: none;
+        border-bottom: 1px solid var(--border);
+        overflow: visible;
+    }
+
+    .side-nav-inner {
+        flex-direction: row;
+        align-items: center;
         justify-content: space-between;
+        padding: 0 12px;
         gap: 12px;
+    }
+
+    .main-content {
+        margin-right: 0;
+        margin-top: var(--nav-height);
+        min-height: calc(100vh - var(--nav-height));
+    }
+
+    .nav-brand {
+        padding: 0;
     }
 
     .nav-links {
@@ -1450,6 +1498,7 @@ hr {
         border-bottom: 1px solid var(--border);
         padding: 8px 12px;
         gap: 0;
+        z-index: var(--z-nav);
     }
 
     .nav-hamburger {
@@ -1458,9 +1507,10 @@ hr {
     }
 
     .nav-actions {
-        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
         justify-content: flex-end;
-        margin-right: 8px;
+        margin-top: 0;
         gap: 8px;
     }
 
@@ -1653,12 +1703,13 @@ hr {
         display: none;
     }
 
-    .top-nav {
+    .side-nav {
         display: none !important;
     }
 
     .main-content {
         margin-left: 0;
+        margin-right: 0;
     }
 
     .card,
@@ -2152,6 +2203,79 @@ body,
 
 .modal-error-text--auth {
     padding: 10px 0 0;
+}
+
+/* Rendered inside the plan list rather than the modal's error slot, so a
+   failed catalogue fetch doesn't look like a form validation error. */
+.modal-error-text--inline {
+    padding: 0 0 12px;
+}
+
+/* Checkout hand-off. Styled as the primary button but it is an <a>: the user
+   clicks through to the payment provider's own page. Hidden until a link
+   comes back (pro-modal.js clears the inline display). */
+.modal-pay-link {
+    display: none;
+    text-align: center;
+    text-decoration: none;
+}
+
+/* ── Pro plan picker ────────────────────────────────────────────────── */
+.plan-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.plan-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.plan-option:hover {
+    border-color: var(--accent-amber);
+}
+
+.plan-option input {
+    margin-top: 3px;
+    accent-color: var(--accent-amber);
+}
+
+.plan-option:has(input:checked) {
+    border-color: var(--accent-amber);
+    background: rgba(255, 165, 0, 0.08);
+}
+
+.plan-option-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.plan-option-name {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.plan-option-price {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent-amber);
+}
+
+.plan-option-summary {
+    font-size: 0.72rem;
+    color: var(--text-muted);
 }
 
 .modal-footer-note {
