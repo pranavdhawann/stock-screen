@@ -1,3 +1,4 @@
+import re
 import requests
 import logging
 from datetime import datetime, timedelta
@@ -268,55 +269,224 @@ def fetch_from_marketwatch_rss(symbol):
         return []
 
 
-def fetch_general_market_news(market):
-    """General market headlines via Google News RSS (no API key required).
+def _strip_tags(text):
+    """Flatten an RSS description to plain text.
 
-    Used by /api/market_news. Unlike fetch_from_google_rss (which targets a
-    single symbol/company), this queries broad market-level terms so the
-    Track News page has something to show for a market rather than a stock.
+    Publisher feeds vary wildly - some send bare text, others a paragraph of
+    HTML with a tracking pixel. The wire only ever renders escaped text, so
+    markup is noise either way.
     """
-    try:
-        if market == 'IN':
-            query = "Indian+stock+market+NSE+BSE+Sensex+Nifty"
-            url = f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en"
-            default_publisher = 'Google News India'
-        else:
-            query = "US+stock+market+Wall+Street+S%26P+500"
-            url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-            default_publisher = 'Google News'
+    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', text or '')).strip()
 
+
+def _parse_rss_items(xml_text, default_publisher, limit):
+    """Parse a generic RSS 2.0 feed into the shared news-item shape.
+
+    Google News puts the originating outlet in <source>; ordinary publisher
+    feeds have no such element and are attributed to the feed itself.
+    """
+    root = ET.fromstring(xml_text)
+    items = []
+    for item_el in root.findall('.//item')[:limit]:
+        pub_date_str = item_el.findtext('pubDate', '')
+        try:
+            published = int(parsedate_to_datetime(pub_date_str).timestamp())
+        except Exception:
+            published = int(datetime.now().timestamp())
+
+        summary = _strip_tags(item_el.findtext('description', ''))
+        items.append({
+            'title': item_el.findtext('title', ''),
+            'summary': summary[:200],
+            'link': item_el.findtext('link', ''),
+            'publisher': item_el.findtext('source', '') or default_publisher,
+            'published': published,
+        })
+    return items
+
+
+def fetch_market_rss(url, default_publisher, limit=20):
+    """Fetch one keyless market-wide RSS feed."""
+    try:
         resp = requests.get(url, timeout=10, headers={
             'User-Agent': 'Mozilla/5.0 (compatible; StockScreen/1.0)'
         })
         resp.raise_for_status()
+        return _parse_rss_items(resp.text, default_publisher, limit)
+    except Exception as e:
+        logger.warning("Market RSS fetch failed for %s: %s", default_publisher, _safe_error_label(e))
+        return []
 
-        root = ET.fromstring(resp.text)
+
+def fetch_finnhub_general_news():
+    """Finnhub's market-wide feed (category=general), not company news."""
+    if not FINNHUB_API_KEY:
+        return []
+    try:
+        resp = requests.get(
+            'https://finnhub.io/api/v1/news',
+            params={'category': 'general', 'token': FINNHUB_API_KEY},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list):
+            return []
+        return [_finnhub_item(article) for article in data[:20]]
+    except Exception as e:
+        logger.warning("Finnhub general news fetch failed: %s", _safe_error_label(e))
+        return []
+
+
+def fetch_newsapi_general(market):
+    """NewsAPI business top-headlines for the market's country."""
+    if not NEWSAPI_KEY:
+        return []
+    try:
+        resp = requests.get(
+            'https://newsapi.org/v2/top-headlines',
+            params={
+                'category': 'business',
+                'country': 'in' if market == 'IN' else 'us',
+                'pageSize': 20,
+                'apiKey': NEWSAPI_KEY,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get('status') != 'ok':
+            return []
+
         items = []
-        for item_el in root.findall('.//item')[:20]:
-            title = item_el.findtext('title', '')
-            link = item_el.findtext('link', '')
-            pub_date_str = item_el.findtext('pubDate', '')
-            source = item_el.findtext('source', default_publisher)
-
+        for article in data.get('articles', []):
             try:
-                published = int(parsedate_to_datetime(pub_date_str).timestamp())
-            except Exception:
+                published = int(datetime.fromisoformat(
+                    (article.get('publishedAt') or '').replace('Z', '+00:00')
+                ).timestamp())
+            except (ValueError, AttributeError):
                 published = int(datetime.now().timestamp())
-
             items.append({
-                'title': title,
-                'summary': '',
-                'link': link,
-                'publisher': source or default_publisher,
+                'title': article.get('title', ''),
+                'summary': (article.get('description') or '')[:200],
+                'link': article.get('url', ''),
+                'publisher': (article.get('source') or {}).get('name', 'NewsAPI'),
                 'published': published,
             })
-
-        unique = _dedup_news(items)
-        unique.sort(key=lambda x: x.get('published', 0), reverse=True)
-        return unique[:20]
+        return items
     except Exception as e:
-        logger.warning("Market news RSS fetch failed for %s: %s", market, _safe_error_label(e))
+        logger.warning("NewsAPI general fetch failed: %s", _safe_error_label(e))
         return []
+
+
+def fetch_alphavantage_general():
+    """Alpha Vantage NEWS_SENTIMENT by topic rather than by ticker."""
+    if not ALPHAVANTAGE_API_KEY:
+        return []
+    try:
+        resp = requests.get(
+            'https://www.alphavantage.co/query',
+            params={
+                'function': 'NEWS_SENTIMENT',
+                'topics': 'financial_markets',
+                'limit': 20,
+                'apikey': ALPHAVANTAGE_API_KEY,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        items = []
+        for article in resp.json().get('feed', []):
+            pub_str = article.get('time_published', '')
+            try:
+                published = int(datetime.strptime(pub_str[:15], '%Y%m%dT%H%M%S').timestamp())
+            except (ValueError, AttributeError):
+                published = int(datetime.now().timestamp())
+            items.append({
+                'title': article.get('title', ''),
+                'summary': (article.get('summary') or '')[:200],
+                'link': article.get('url', ''),
+                'publisher': article.get('source', 'Alpha Vantage'),
+                'published': published,
+            })
+        return items
+    except Exception as e:
+        logger.warning("Alpha Vantage general fetch failed: %s", _safe_error_label(e))
+        return []
+
+
+# Keyless market-wide feeds, per market. Google News RSS is listed first but
+# carries no special weight: it 503s from datacenter IPs (Cloud Run included),
+# which is precisely why the wire can no longer depend on it alone.
+_MARKET_FEEDS = {
+    'US': [
+        ("https://news.google.com/rss/search?q=US+stock+market+Wall+Street+S%26P+500"
+         "&hl=en-US&gl=US&ceid=US:en", 'Google News'),
+        ("https://finance.yahoo.com/news/rssindex", 'Yahoo Finance'),
+        ("https://feeds.marketwatch.com/marketwatch/topstories/", 'MarketWatch'),
+        ("https://feeds.marketwatch.com/marketwatch/marketpulse/", 'MarketWatch'),
+        ("https://search.cnbc.com/rs/search/combinedcms/view.xml"
+         "?partnerId=wrss01&id=100003114", 'CNBC'),
+    ],
+    # India carries no keyed sources worth having (Finnhub/Alpha Vantage are
+    # US-centric), so its redundancy has to come from breadth of publisher
+    # feeds instead. Moneycontrol, Zee Business and NDTV Profit were tried and
+    # rejected: the first two 403 datacenter traffic, the third's feed is
+    # general news rather than markets.
+    'IN': [
+        ("https://news.google.com/rss/search?q=Indian+stock+market+NSE+BSE+Sensex+Nifty"
+         "&hl=en-IN&gl=IN&ceid=IN:en", 'Google News India'),
+        ("https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+         'Economic Times'),
+        ("https://www.business-standard.com/rss/markets-106.rss", 'Business Standard'),
+        ("https://www.livemint.com/rss/markets", 'Livemint'),
+        ("https://www.thehindubusinessline.com/markets/feeder/default.rss",
+         'Hindu BusinessLine'),
+    ],
+}
+
+
+def fetch_general_market_news(market):
+    """General market headlines for /api/market_news.
+
+    Fans out across every configured source the way aggregate_news() does for
+    a single symbol, for the same reason: this feed used to be Google News RSS
+    alone, and when Google started returning 503 to Cloud Run's egress IP the
+    whole Market Wire went blank. Keyless publisher feeds carry the wire on
+    their own; the keyed sources (Finnhub/NewsAPI/Alpha Vantage) are additive
+    when their keys are configured. Every source swallows its own failures, so
+    a dead source costs coverage, never the page.
+    """
+    market = 'IN' if market == 'IN' else 'US'
+
+    sources = [
+        (publisher, lambda u=url, p=publisher: fetch_market_rss(u, p))
+        for url, publisher in _MARKET_FEEDS[market]
+    ]
+    if NEWSAPI_KEY:
+        sources.append(('newsapi', lambda: fetch_newsapi_general(market)))
+    # Finnhub's general feed and Alpha Vantage's financial_markets topic are
+    # both US-centric; for India they'd dilute the wire with off-market noise.
+    if market == 'US':
+        if FINNHUB_API_KEY:
+            sources.append(('finnhub', fetch_finnhub_general_news))
+        if ALPHAVANTAGE_API_KEY:
+            sources.append(('alphavantage', fetch_alphavantage_general))
+
+    all_items = []
+    futures = {news_fanout_executor.submit(fn): name for name, fn in sources}
+    for future in as_completed(futures):
+        source_name = futures[future]
+        try:
+            result = future.result()
+            logger.info("Market wire: %d items from %s (%s)", len(result), source_name, market)
+            all_items.extend(result)
+        except Exception as e:
+            logger.warning("Market wire source %s failed: %s", source_name, _safe_error_label(e))
+
+    unique = [item for item in _dedup_news(all_items) if item.get('title')]
+    unique.sort(key=lambda x: x.get('published', 0), reverse=True)
+    return unique[:30]
 
 
 def _dedup_news(items):

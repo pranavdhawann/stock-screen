@@ -18,6 +18,7 @@ from app.services.http_limits import (
     client_key as _client_key,
     consume_limit as _consume_limit,
     consume_tiered_limit as _consume_tiered_limit,
+    has_unlimited_access as _has_unlimited_access,
 )
 from app.services.rate_limit import status as rate_limit_status
 import requests as http_requests
@@ -553,11 +554,7 @@ def forecast_stock():
 
     try:
         result = forecasting.generate_forecast(symbol)
-        quota = rate_limit_status("forecast", _client_key(), FORECAST_LIMIT, FORECAST_WINDOW_SECONDS)
-        result["usage"] = {
-            "remaining": quota.remaining,
-            "reset_at": quota.reset_at.isoformat(),
-        }
+        result["usage"] = _forecast_usage()
         return jsonify(result)
     except ValueError as e:
         logger.error("Forecast request validation failed for %s: %s", symbol, e)
@@ -567,14 +564,26 @@ def forecast_stock():
         return jsonify({'error': 'Forecast generation failed. Please try again.'}), 500
 
 
-@api_bp.route('/forecast/status')
-def forecast_status():
+def _forecast_usage():
+    """Remaining forecast quota, or an unlimited marker for pro accounts.
+
+    Without this a pro user would be told "0 remaining" by the very endpoint
+    that just served them an unmetered forecast.
+    """
+    if _has_unlimited_access():
+        return {"unlimited": True, "limit": None, "remaining": None, "reset_at": None}
     quota = rate_limit_status("forecast", _client_key(), FORECAST_LIMIT, FORECAST_WINDOW_SECONDS)
-    return jsonify({
+    return {
+        "unlimited": False,
         "limit": FORECAST_LIMIT,
         "remaining": quota.remaining,
         "reset_at": quota.reset_at.isoformat(),
-    })
+    }
+
+
+@api_bp.route('/forecast/status')
+def forecast_status():
+    return jsonify(_forecast_usage())
 
 
 @api_bp.route('/get_default_markets')

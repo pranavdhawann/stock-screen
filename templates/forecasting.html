@@ -195,6 +195,7 @@
     const gateCloseBtn = document.getElementById('forecastGateClose');
     const gateAcknowledgeBtn = document.getElementById('forecastGateAcknowledge');
     const fetchJson = window.StockScreenUtils.fetchJson;
+    const trackEvent = window.StockScreenUtils.trackEvent || function() {};
     let forecastChart = null;
     let forecastStatus = { limit: 1, remaining: 0, reset_at: null };
 
@@ -211,12 +212,19 @@
     }
 
     function hasFreeRunRemaining() {
+        // Pro accounts report no numeric remaining at all - treating that as
+        // zero would lock the run button for the users who are exempt.
+        if (forecastStatus.unlimited) return true;
         return Number(forecastStatus.remaining || 0) > 0;
     }
 
     function updateUsageLabel() {
         if (isLocalTesting()) {
             usageLabel.textContent = 'Local testing mode';
+            return;
+        }
+        if (forecastStatus.unlimited) {
+            usageLabel.textContent = 'PRO - unlimited runs';
             return;
         }
         const remaining = Math.max(Number(forecastStatus.remaining || 0), 0);
@@ -537,10 +545,12 @@
         }
 
         if (!isLocalTesting() && !hasFreeRunRemaining()) {
+            trackEvent('forecast-gated', { symbol: symbol });
             showGateModal();
             return;
         }
 
+        trackEvent('forecast-run', { symbol: symbol });
         setLoading(true);
         const historyPromise = fetchJson('/api/chart_data?symbol=' + encodeURIComponent(symbol) + '&period=30d')
             .then(function(chart) { return chart.chart_data || []; })

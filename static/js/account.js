@@ -24,8 +24,29 @@
         window.dispatchEvent(new CustomEvent('auth:changed', { detail: state }));
     }
 
-    function setState(authenticated, email) {
-        state = { authenticated: !!authenticated, email: email || null };
+    // "GET PRO" is a waitlist prompt; an account that already has pro should
+    // see its status instead of being asked to request what it holds.
+    var waitlistBtn = document.getElementById('waitlistBtn');
+
+    function updateProBadge() {
+        if (!waitlistBtn) return;
+        if (state.plan === 'pro') {
+            waitlistBtn.textContent = 'PRO';
+            waitlistBtn.disabled = true;
+            waitlistBtn.title = 'Pro plan active - unlimited access';
+        } else {
+            waitlistBtn.textContent = 'GET PRO';
+            waitlistBtn.disabled = false;
+            waitlistBtn.title = '';
+        }
+    }
+
+    function setState(authenticated, email, plan) {
+        state = {
+            authenticated: !!authenticated,
+            email: email || null,
+            plan: (authenticated && plan) || 'free',
+        };
         if (state.authenticated) {
             var name = String(state.email || '').split('@')[0];
             accountBtn.textContent = 'SIGN OUT · ' + name.slice(0, 14).toUpperCase();
@@ -34,6 +55,7 @@
             accountBtn.textContent = 'SIGN IN';
             accountBtn.title = 'Sign in or create an account';
         }
+        updateProBadge();
         emitChange();
     }
 
@@ -109,7 +131,11 @@
             body: JSON.stringify({ email: email, password: password }),
         }).then(function(data) {
             setSubmitting(false);
-            setState(true, data.email);
+            // Event name only - never the address. Umami is cookieless and
+            // this keeps it free of anything that identifies a person.
+            var track = (window.StockScreenUtils || {}).trackEvent;
+            if (track) track(mode === 'signup' ? 'account-signup' : 'account-login');
+            setState(true, data.email, data.plan);
             closeModal();
         }).catch(function(error) {
             setSubmitting(false);
@@ -119,7 +145,7 @@
 
     // Restore session state on page load.
     fetchJson('/api/auth/me')
-        .then(function(data) { setState(data.authenticated, data.email); })
+        .then(function(data) { setState(data.authenticated, data.email, data.plan); })
         .catch(function() { setState(false, null); });
 
     window.StockScreenAuth = {

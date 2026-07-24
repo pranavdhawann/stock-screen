@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const escapeHtml = utils.escapeHtml || (value => String(value ?? ''));
     const sanitizeUrl = utils.sanitizeUrl || (() => '');
     const fetchJson = utils.fetchJson || ((url, options) => fetch(url, options).then(r => r.json()));
+    const trackEvent = utils.trackEvent || (() => {});
 
     function getCurrentMarket() {
         return marketSelect && marketSelect.value === 'IN' ? 'IN' : 'US';
@@ -39,13 +40,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Same .news-item / .news-container markup conventions as the analysis
     // view's news renderer in index-page.js, so it inherits existing CSS.
-    function renderNews(items) {
+    function renderNews(target, items, emptyMessage) {
+        if (!target) return;
         if (!items || items.length === 0) {
-            container.innerHTML = '<div class="text-center py-3 idx-news-empty">No headlines available right now.</div>';
+            target.innerHTML = `<div class="text-center py-3 idx-news-empty">${escapeHtml(emptyMessage)}</div>`;
             return;
         }
 
-        container.innerHTML = items.map(item => {
+        target.innerHTML = items.map(item => {
             const titleRaw = String(item?.title || '');
             const summaryRaw = String(item?.summary || '');
             const summaryTrimmed = summaryRaw.length > 200 ? `${summaryRaw.slice(0, 200)}...` : summaryRaw;
@@ -90,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchJson(`/api/market_news?market=${getCurrentMarket()}`)
             .then(data => {
                 if (requestToken !== token) return;
-                renderNews(data.news || []);
+                renderNews(container, data.news || [], 'No headlines available right now.');
                 updateTimestamp(data.fetched_at || null);
             })
             .catch(error => {
@@ -105,4 +107,79 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadNews();
+
+    // ── Per-stock news ────────────────────────────────────────────────────
+    // Same aggregated feed the analysis view shows (/api/news), given its own
+    // ticker box here so the page stands alone: you can pull a stock's wire
+    // without first running a full sentiment analysis on the main page.
+    const stockForm = document.getElementById('stockNewsForm');
+    const stockInput = document.getElementById('stockNewsInput');
+    const stockContainer = document.getElementById('stockNewsContainer');
+
+    if (stockForm && stockInput && stockContainer) {
+        let stockToken = 0;
+
+        // Survives navigation away and back, so the section isn't empty every
+        // time you return to the page.
+        const LAST_SYMBOL_KEY = 'trackNewsLastSymbol';
+
+        function readLastSymbol() {
+            try {
+                return window.localStorage.getItem(LAST_SYMBOL_KEY) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function rememberSymbol(symbol) {
+            try {
+                window.localStorage.setItem(LAST_SYMBOL_KEY, symbol);
+            } catch (e) {
+                /* private mode / storage disabled - not worth failing over */
+            }
+        }
+
+        function loadStockNews(symbol) {
+            const token = ++stockToken;
+            stockContainer.innerHTML =
+                '<div class="text-center py-3"><span class="terminal-cursor">LOADING ' +
+                escapeHtml(symbol) + ' NEWS</span></div>';
+
+            fetchJson(`/api/news?symbol=${encodeURIComponent(symbol)}`)
+                .then(data => {
+                    if (stockToken !== token) return;
+                    // Only remember symbols the API accepted, so a typo does
+                    // not greet you with its own error on every later visit.
+                    rememberSymbol(symbol);
+                    renderNews(
+                        stockContainer,
+                        data.news_items || [],
+                        `No recent news for ${symbol}.`,
+                    );
+                })
+                .catch(error => {
+                    if (stockToken !== token) return;
+                    console.error('[Track News] Stock news error:', error);
+                    stockContainer.innerHTML =
+                        `<div class="text-center py-3 idx-news-empty">${escapeHtml(error.message || 'Unable to load news for that symbol.')}</div>`;
+                });
+        }
+
+        stockForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const symbol = stockInput.value.trim().toUpperCase();
+            if (!symbol) return;
+            trackEvent('track-news-symbol', { symbol: symbol });
+            loadStockNews(symbol);
+        });
+
+        const remembered = readLastSymbol();
+        if (remembered) {
+            stockInput.value = remembered;
+            loadStockNews(remembered);
+        } else {
+            stockContainer.innerHTML =
+                '<div class="text-center py-3 idx-news-empty">Enter a ticker above to load its news.</div>';
+        }
+    }
 });

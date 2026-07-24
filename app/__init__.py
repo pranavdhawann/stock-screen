@@ -162,6 +162,17 @@ def create_app():
         f"{_umami_parsed.scheme}://{_umami_parsed.netloc}"
         if _umami_parsed.scheme and _umami_parsed.netloc else ''
     )
+    # Umami Cloud serves the tracker from cloud.umami.is but POSTs the
+    # collected events to gateway.umami.is. Allowlisting only the script
+    # origin silently discards every hit: the script loads, then every send
+    # dies on connect-src and the dashboard reads zero forever. A self-hosted
+    # instance sends to itself, so it needs no second origin.
+    _CLOUD_SCRIPT_ORIGIN = 'https://cloud.umami.is'
+    _CLOUD_SEND_ORIGIN = 'https://gateway.umami.is'
+    app.config['UMAMI_SEND_ORIGIN'] = os.environ.get(
+        'UMAMI_SEND_ORIGIN',
+        _CLOUD_SEND_ORIGIN if app.config['UMAMI_ORIGIN'] == _CLOUD_SCRIPT_ORIGIN else '',
+    ).strip()
 
     @app.context_processor
     def _security_context():
@@ -174,8 +185,16 @@ def create_app():
     @app.after_request
     def _set_security_headers(response):
         nonce = getattr(g, 'csp_nonce', '')
-        umami_origin = app.config.get('UMAMI_ORIGIN', '') if app.config.get('UMAMI_WEBSITE_ID') else ''
+        analytics_on = bool(app.config.get('UMAMI_WEBSITE_ID'))
+        umami_origin = app.config.get('UMAMI_ORIGIN', '') if analytics_on else ''
+        umami_send_origin = app.config.get('UMAMI_SEND_ORIGIN', '') if analytics_on else ''
         umami_src = f' {umami_origin}' if umami_origin else ''
+        # connect-src needs the script origin *and* the collector origin.
+        umami_connect = ''.join(
+            f' {origin}' for origin in dict.fromkeys(
+                origin for origin in (umami_origin, umami_send_origin) if origin
+            )
+        )
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         response.headers.setdefault('X-Frame-Options', 'DENY')
@@ -200,7 +219,7 @@ def create_app():
             "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: https:; "
-            f"connect-src 'self'{umami_src}; "
+            f"connect-src 'self'{umami_connect}; "
             "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         )
         return response

@@ -210,6 +210,8 @@
             .filter(input => input.checked && input.value)
             .map(input => input.value);
 
+        if (utils.trackEvent) utils.trackEvent('sec-filings-search', { symbol: ticker });
+
         if (types.length === 0) {
             showError('Please select at least one filing type.');
             return;

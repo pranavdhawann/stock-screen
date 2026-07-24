@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const sanitizeSymbol = utils.sanitizeSymbol || (value => String(value ?? '').replace(/[^A-Za-z0-9.^-]/g, ''));
     const sanitizeUrl = utils.sanitizeUrl || (() => '');
     const fetchJson = utils.fetchJson;
+    const trackEvent = utils.trackEvent || (() => {});
+    const currentMarket = () => window.StockScreenMarket || 'US';
     const showError = message => utils.showError(errorMessage, message, {
         hiddenClass: 'd-none',
         textTarget: document.getElementById('errorText'),
@@ -442,6 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const symbol = sanitizeSymbol(searchInput.value).toUpperCase();
         if (!symbol) return;
+        trackEvent('analyze-stock', { symbol: symbol, market: currentMarket() });
         analyzeSentiment(symbol);
     });
 
