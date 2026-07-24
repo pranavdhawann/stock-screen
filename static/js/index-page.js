@@ -1,70 +1,21 @@
+// Markets page — market overview, movers board, and the stock analysis view.
+//
+// Symbol *selection* lives on the Track page (static/js/stock-search.js),
+// which links here as /?symbol=SYM. This file owns the analysis itself, which
+// is also opened from the movers table (index-terminal.js) and the watchlist
+// (watchlist.js) via window.StockScreenAnalyze.
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('stockSearch');
-    const autocompleteDropdown = document.getElementById('autocompleteDropdown');
-    const sampleStocksDropdown = document.getElementById('sampleStocksDropdown');
-    const sentimentForm = document.getElementById('sentimentForm');
     const resultsSection = document.getElementById('resultsSection');
     const progressSection = document.getElementById('progressSection');
     const errorMessage = document.getElementById('errorMessage');
     const stockPageTitle = document.getElementById('stockPageTitle');
     const backToMarketsBtn = document.getElementById('backToMarketsBtn');
 
-    let searchTimeout;
-    let currentAutocompleteIndex = -1;
-    const AUTOCOMPLETE_DEBOUNCE_MS = 150;
-
-    // Helper: hide autocomplete dropdown and reset keyboard index
-    function dismissAutocomplete() {
-        if (autocompleteDropdown) {
-            autocompleteDropdown.style.display = 'none';
-        }
-        currentAutocompleteIndex = -1;
-    }
-
-    // Keyboard navigation for autocomplete
-    document.addEventListener('keydown', function(e) {
-        const autocompleteItems = document.querySelectorAll('.autocomplete-item');
-        if (autocompleteItems.length === 0) return;
-
-        switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                currentAutocompleteIndex = Math.min(currentAutocompleteIndex + 1, autocompleteItems.length - 1);
-                updateAutocompleteHighlight(autocompleteItems);
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                currentAutocompleteIndex = Math.max(currentAutocompleteIndex - 1, -1);
-                updateAutocompleteHighlight(autocompleteItems);
-                break;
-            case 'Enter':
-                e.preventDefault();
-                if (currentAutocompleteIndex >= 0 && autocompleteItems[currentAutocompleteIndex]) {
-                    autocompleteItems[currentAutocompleteIndex].click();
-                }
-                break;
-            case 'Escape':
-                dismissAutocomplete();
-                break;
-        }
-    });
-
-    function updateAutocompleteHighlight(items) {
-        items.forEach((item, index) => {
-            if (index === currentAutocompleteIndex) {
-                item.style.backgroundColor = 'rgba(255, 165, 0, 0.15)';
-                item.style.fontWeight = '600';
-            } else {
-                item.style.backgroundColor = '';
-                item.style.fontWeight = '';
-            }
-        });
-    }
     const NEWS_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
     const PROGRESS_FETCH_THRESHOLD = 30;
     const PROGRESS_ANALYZE_THRESHOLD = 60;
-    const DEBUG_LOGS = new URLSearchParams(window.location.search).has('debug');
-    let autocompleteController = null;
+    const QUERY_PARAMS = new URLSearchParams(window.location.search);
+    const DEBUG_LOGS = QUERY_PARAMS.has('debug');
 
     function debugLog(...args) {
         if (DEBUG_LOGS) {
@@ -77,8 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const sanitizeSymbol = utils.sanitizeSymbol || (value => String(value ?? '').replace(/[^A-Za-z0-9.^-]/g, ''));
     const sanitizeUrl = utils.sanitizeUrl || (() => '');
     const fetchJson = utils.fetchJson;
-    const trackEvent = utils.trackEvent || (() => {});
-    const currentMarket = () => window.StockScreenMarket || 'US';
     const showError = message => utils.showError(errorMessage, message, {
         hiddenClass: 'd-none',
         textTarget: document.getElementById('errorText'),
@@ -92,64 +41,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'unknown';
     }
 
-    function positionFloatingDropdown(dropdown) {
-        if (!dropdown || !searchInput) return;
-        const rect = searchInput.getBoundingClientRect();
-        dropdown.style.position = 'fixed';
-        dropdown.style.left = `${rect.left}px`;
-        dropdown.style.top = `${rect.bottom + 2}px`;
-        dropdown.style.width = `${rect.width}px`;
-        dropdown.style.maxWidth = `${rect.width}px`;
-        dropdown.style.zIndex = '5000';
-        dropdown.style.transform = 'none';
-        dropdown.style.inset = 'auto';
-    }
-
-    function showSampleStocksDropdown() {
-        if (!sampleStocksDropdown) return;
-        positionFloatingDropdown(sampleStocksDropdown);
-        sampleStocksDropdown.style.display = 'block';
-        setTimeout(() => {
-            if (sampleStocksDropdown) {
-                sampleStocksDropdown.classList.add('show');
-            }
-        }, 10);
-    }
-
-    function hideSampleStocksDropdown() {
-        if (!sampleStocksDropdown) return;
-        sampleStocksDropdown.classList.remove('show');
-        setTimeout(() => {
-            if (sampleStocksDropdown) {
-                sampleStocksDropdown.style.display = 'none';
-            }
-        }, 300);
-    }
-
-    // Set initial stock sections (default markets grid itself is loaded by
-    // index-charts.js, which must load before this file).
-    toggleStockSections('US');
-
-    // Make title clickable to reset search and go to home
+    // Make title clickable to reset the analysis view and go home
     const mainTitle = document.getElementById('mainTitle');
 
     if (mainTitle) {
         mainTitle.addEventListener('click', function(e) {
             e.preventDefault();
 
-            // Reset search input
-            if (searchInput) {
-                searchInput.value = '';
-            }
-
-            // Hide all results and dropdowns
+            // Hide any results still on screen
             if (resultsSection) {
                 resultsSection.classList.add('d-none');
-            }
-            dismissAutocomplete();
-            if (sampleStocksDropdown) {
-                sampleStocksDropdown.classList.remove('show');
-                sampleStocksDropdown.style.display = 'none';
             }
 
             // Clear any error messages
@@ -180,172 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window.StockScreenMarket = this.value === 'IN' ? 'IN' : 'US';
 
             window.StockScreenCharts && window.StockScreenCharts.loadDefaultMarkets(this.value);
-            toggleStockSections(this.value);
             window.StockScreenTerminal && window.StockScreenTerminal.loadTerminalQuotes();
-
-            // Stale US/IN autocomplete results shouldn't linger across a
-            // market switch.
-            if (autocompleteController) {
-                autocompleteController.abort();
-                autocompleteController = null;
-            }
-            dismissAutocomplete();
-        });
-    }
-
-    // Function to toggle stock sections based on country
-    function toggleStockSections(country) {
-        const usStocksSection = document.getElementById('usStocksSection');
-        const indianStocksSection = document.getElementById('indianStocksSection');
-
-        if (country === 'US') {
-            if (usStocksSection) usStocksSection.style.display = 'block';
-            if (indianStocksSection) indianStocksSection.style.display = 'none';
-        } else if (country === 'IN') {
-            if (usStocksSection) usStocksSection.style.display = 'none';
-            if (indianStocksSection) indianStocksSection.style.display = 'block';
-        }
-    }
-
-    // Load stock dropdown from API
-    function loadStockDropdown() {
-        fetchJson('/api/stock_list')
-            .then(data => {
-                const usSection = document.getElementById('usStocksSection');
-                const inSection = document.getElementById('indianStocksSection');
-                if (usSection && data.US) {
-                    usSection.innerHTML = data.US.map(s =>
-                        `<a class="dropdown-item" href="#" data-symbol="${sanitizeSymbol(s.symbol)}">${escapeHtml(s.name)} (${escapeHtml(s.symbol)})</a>`
-                    ).join('');
-                }
-                if (inSection && data.IN) {
-                    inSection.innerHTML = data.IN.map(s =>
-                        `<a class="dropdown-item" href="#" data-symbol="${sanitizeSymbol(s.symbol)}">${escapeHtml(s.name)} (${escapeHtml(s.symbol)})</a>`
-                    ).join('');
-                }
-            })
-            .catch(error => console.error('Error loading stock list:', error));
-    }
-    loadStockDropdown();
-
-    window.addEventListener('resize', function() {
-        if (sampleStocksDropdown && sampleStocksDropdown.style.display === 'block') {
-            positionFloatingDropdown(sampleStocksDropdown);
-        }
-        if (autocompleteDropdown && autocompleteDropdown.style.display === 'block') {
-            positionFloatingDropdown(autocompleteDropdown);
-        }
-    });
-
-    window.addEventListener('scroll', function() {
-        if (sampleStocksDropdown && sampleStocksDropdown.style.display === 'block') {
-            positionFloatingDropdown(sampleStocksDropdown);
-        }
-        if (autocompleteDropdown && autocompleteDropdown.style.display === 'block') {
-            positionFloatingDropdown(autocompleteDropdown);
-        }
-    }, true);
-
-
-    // Show sample stocks when clicking on search input and clear existing results
-    searchInput.addEventListener('focus', function() {
-        // Clear existing results when focusing on search input
-        autoReset();
-
-        if (this.value.trim() === '' && sampleStocksDropdown) {
-            showSampleStocksDropdown();
-        }
-    });
-
-    // Clear search input when clicking on it (if it has a value)
-    searchInput.addEventListener('click', function() {
-        if (this.value.trim() !== '') {
-            this.value = '';
-            autoReset();
-            if (sampleStocksDropdown) {
-                showSampleStocksDropdown();
-            }
-        }
-    });
-
-    // Hide sample stocks when clicking outside
-    document.addEventListener('click', function(e) {
-        if (sampleStocksDropdown && !searchInput.contains(e.target) && !sampleStocksDropdown.contains(e.target)) {
-            hideSampleStocksDropdown();
-        }
-    });
-
-    // Handle sample stock selection
-    sampleStocksDropdown.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (e.target.classList.contains('dropdown-item')) {
-            const symbol = e.target.dataset.symbol;
-            searchInput.value = symbol;
-            hideSampleStocksDropdown();
-            analyzeSentiment(symbol);
-        }
-    });
-
-    // Search input with autocomplete (faster)
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-
-        clearTimeout(searchTimeout);
-
-        // Only auto-reset if there are existing results and user is typing a new query
-        if (query.length > 0 && !resultsSection.classList.contains('d-none')) {
-            autoReset();
-        }
-
-        // Hide sample stocks when typing
-        hideSampleStocksDropdown();
-
-        if (query.length < 1) {
-            dismissAutocomplete();
-            return;
-        }
-
-        searchTimeout = setTimeout(() => {
-            if (autocompleteController) {
-                autocompleteController.abort();
-            }
-            autocompleteController = new AbortController();
-            const market = window.StockScreenMarket === 'IN' ? 'IN' : 'US';
-            fetchJson(`/api/search_stocks?q=${encodeURIComponent(query)}&market=${market}`, { signal: autocompleteController.signal })
-                .then(data => {
-                    displayAutocomplete(data);
-                })
-                .catch(error => {
-                    if (error.name === 'AbortError') return;
-                    console.error('Error fetching autocomplete:', error);
-                });
-        }, AUTOCOMPLETE_DEBOUNCE_MS); // Faster response time
-    });
-
-    function displayAutocomplete(results) {
-        if (results.length === 0) {
-            dismissAutocomplete();
-            return;
-        }
-
-        autocompleteDropdown.innerHTML = results.map(stock => `
-            <div class="autocomplete-item" data-symbol="${sanitizeSymbol(stock.symbol)}">
-                <strong>${escapeHtml(stock.symbol)}</strong> - ${escapeHtml(stock.name)}
-            </div>
-        `).join('');
-
-        positionFloatingDropdown(autocompleteDropdown);
-        autocompleteDropdown.style.display = 'block';
-        currentAutocompleteIndex = -1;
-
-        // Add click handlers
-        autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const symbol = this.dataset.symbol;
-                searchInput.value = symbol;
-                dismissAutocomplete();
-                analyzeSentiment(symbol); // Show news immediately on click
-            });
         });
     }
 
@@ -432,22 +168,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderNewsToContainer(newsItems, newsItemsContainer);
     }
 
-    // Hide autocomplete when clicking outside
-    document.addEventListener('click', function(e) {
-        if (autocompleteDropdown && !searchInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
-            dismissAutocomplete();
-        }
-    });
-
-    // Form submission (prevent default form behavior)
-    sentimentForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const symbol = sanitizeSymbol(searchInput.value).toUpperCase();
-        if (!symbol) return;
-        trackEvent('analyze-stock', { symbol: symbol, market: currentMarket() });
-        analyzeSentiment(symbol);
-    });
-
     // Global error handler for async listener errors (browser extensions)
     window.addEventListener('unhandledrejection', function(event) {
         if (event.reason && event.reason.message &&
@@ -510,22 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // News feed functionality
-    // Quick-pick stock suggestions
-    document.querySelectorAll('.quick-pick').forEach(pick => {
-        pick.addEventListener('click', function() {
-            const symbol = this.dataset.symbol;
-            if (symbol && searchInput) {
-                searchInput.value = symbol;
-                analyzeSentiment(symbol);
-            }
-        });
-    });
-
-    // Market Wire headlines moved off the main page onto /track-news (see
-    // static/js/track-news.js); #marketHeadlines no longer exists here, so
-    // there is nothing left for this file to load or render.
-
     // Chart range toggle
     const chartRangeToggle = document.getElementById('chartRangeToggle');
     if (chartRangeToggle) {
@@ -567,22 +271,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Auto-reset function (called when starting new search)
+    // Clears the previous analysis before a new one starts, so a slow fetch
+    // never leaves the old symbol's news, insights and price on screen.
     function autoReset() {
         // Hide all sections
         resultsSection.classList.add('d-none');
         progressSection.style.display = 'none';
         progressSection.classList.add('d-none');
         errorMessage.classList.add('d-none');
-
-        // Show quick suggestions again
-        const quickSuggestions = document.getElementById('quickSuggestions');
-        if (quickSuggestions) {
-            quickSuggestions.style.display = '';
-        }
-
-
-        // Button removed - no need to reset button state
 
         // Reset progress bar
         const progressBar = document.getElementById('progressBar');
@@ -645,10 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (searchInput) {
-            searchInput.value = cleanSymbol;
-        }
-
+        autoReset();
         switchTab('news');
 
         // Show progress bar
@@ -794,12 +487,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update stock price display
         updateStockPrice(data);
 
-        // Hide quick suggestions when results show
-        const quickSuggestions = document.getElementById('quickSuggestions');
-        if (quickSuggestions) {
-            quickSuggestions.style.display = 'none';
-        }
-
         // Show stock chart card
         const sentimentCard = document.querySelector('.equal-height > [class*="col-lg"]');
         if (sentimentCard) {
@@ -825,9 +512,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
          // Show results section
          resultsSection.classList.remove('d-none');
-
-         // Don't clear search input - keep the stock name visible
-         dismissAutocomplete();
 
          // Notify companion scripts (watchlist.js WATCH button state).
          window.dispatchEvent(new CustomEvent('analysis:shown', { detail: { symbol: currentSymbol } }));
@@ -885,4 +569,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Let companion scripts (watchlist.js) open an analysis view.
     window.StockScreenAnalyze = analyzeSentiment;
 
+    // Deep link: /?symbol=AAPL opens straight into that stock's analysis.
+    // This is how the Track page's search box hands a symbol over. The param
+    // is dropped from the URL afterwards so a refresh doesn't silently re-run
+    // (and re-bill) the analysis.
+    const deepLinkSymbol = sanitizeSymbol(QUERY_PARAMS.get('symbol') || '').toUpperCase();
+    if (deepLinkSymbol) {
+        window.history.replaceState(null, '', `${window.location.pathname}#news`);
+        analyzeSentiment(deepLinkSymbol);
+    }
 });

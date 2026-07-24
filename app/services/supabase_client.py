@@ -290,6 +290,27 @@ def add_waitlist_email(email: str) -> str:
         return "unavailable"
 
 
+def add_pro_payment_request(email: str, plan: str) -> str:
+    """Record a request for a Pro checkout link.
+
+    Returns "added" or "unavailable". Unlike add_waitlist_email() there is no
+    duplicate outcome: public.pro_payment_requests has no unique constraint on
+    email because asking twice is legitimate (a different plan, or an expired
+    link), so every request is its own row.
+    """
+    client = _get_client()
+    if not client:
+        return "unavailable"
+    try:
+        client.table("pro_payment_requests").insert(
+            {"email": email.strip().lower(), "plan": plan}
+        ).execute()
+        return "added"
+    except Exception as exc:
+        logger.error("Pro payment request insert failed: %s", exc, exc_info=True)
+        return "unavailable"
+
+
 def get_user_plan(user_id: str) -> str:
     """Current entitlement tier for an account, defaulting to 'free'.
 

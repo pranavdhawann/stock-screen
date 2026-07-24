@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, render_template, jsonify, redirect, url_for
 from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
@@ -38,6 +38,16 @@ def forecasting():
     return render_template('forecasting.html')
 
 
+@main_bp.route('/track')
+def track():
+    return render_template('track.html')
+
+
 @main_bp.route('/track-news')
-def track_news():
-    return render_template('track_news.html')
+def track_news_legacy():
+    """Permanent redirect for the page's former URL.
+
+    /track-news was linked from the nav (and is in the wild via shared links)
+    before the page became /track, so keep it resolving instead of 404ing.
+    """
+    return redirect(url_for('main.track'), code=301)

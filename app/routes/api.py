@@ -7,6 +7,7 @@ from app.config import (
     STOCK_DIRECTORY, INDIAN_STOCKS, MARKET_INDICES,
     get_company_name, get_currency, is_indian_stock,
     EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
+    PRO_PLANS, PRO_PLANS_BY_CODE,
 )
 from app.services import (
     bse_filings, stock_data, sentiment, insights, sec_edgar,
@@ -51,6 +52,14 @@ WAITLIST_EMAIL_MAX_LENGTH = 254
 # Deliberately identical for a new address and one already on the list - see
 # supabase_client.add_waitlist_email() on why the two must not be told apart.
 WAITLIST_CONFIRMATION = "You're on the list. We'll email you when paid-tier access opens."
+
+PRO_REQUEST_LIMIT = 5
+PRO_REQUEST_WINDOW_SECONDS = 60 * 60
+# Shown when the plan has no hosted checkout URL configured yet. The request
+# is still recorded either way, so the user is never left with nothing.
+PRO_REQUEST_PENDING_MESSAGE = (
+    "Request received. We'll email your payment link shortly."
+)
 
 # How far back the sentiment graph asks for stored daily snapshots. Nothing
 # prunes public.sentiment_history, so this is purely a read window.
@@ -950,6 +959,78 @@ def join_waitlist():
 
     # 'added' and 'duplicate' intentionally return the same body and status.
     return jsonify({'status': 'ok', 'message': WAITLIST_CONFIRMATION})
+
+
+@api_bp.route('/pro/plans')
+def list_pro_plans():
+    """Purchasable Pro plans, for the upgrade modal.
+
+    Served from config rather than hardcoded in the template so prices and
+    checkout links stay a deployment concern. The payment link itself is not
+    exposed here - it is only returned by /pro/payment-link, alongside the
+    recorded request, so a link never leaks without a request behind it.
+    """
+    return jsonify({
+        'plans': [
+            {
+                'code': plan['code'],
+                'name': plan['name'],
+                'price': plan['price'],
+                'summary': plan['summary'],
+            }
+            for plan in PRO_PLANS
+        ],
+    })
+
+
+@api_bp.route('/pro/payment-link', methods=['POST'])
+def request_pro_payment_link():
+    """Record a request to buy Pro and hand back the checkout link.
+
+    No payment is processed here: the response is either an operator-configured
+    hosted checkout URL (Stripe Payment Link, Razorpay page, ...) or a promise
+    to email one. Either way the request lands in public.pro_payment_requests
+    so nothing is lost when no provider is wired up yet.
+    """
+    data = _json_object()
+    if data is None:
+        return jsonify({'error': 'Invalid request'}), 400
+
+    if data.get("website") or data.get("company"):
+        logger.info("Pro request honeypot submission ignored from %s", _client_key())
+        return jsonify({'status': 'ok', 'message': PRO_REQUEST_PENDING_MESSAGE})
+
+    email = str(data.get('email') or '').strip().lower()
+    if not _is_valid_email(email, WAITLIST_EMAIL_MAX_LENGTH):
+        return jsonify({'error': 'Please enter a valid email address'}), 400
+
+    plan_code = str(data.get('plan') or '').strip()
+    plan = PRO_PLANS_BY_CODE.get(plan_code)
+    if not plan:
+        return jsonify({'error': 'Please choose a plan'}), 400
+
+    limited = _consume_limit("pro_request", PRO_REQUEST_LIMIT, PRO_REQUEST_WINDOW_SECONDS)
+    if limited:
+        return limited
+
+    sbc = _get_supabase_client()
+    outcome = sbc.add_pro_payment_request(email, plan['code']) if sbc else 'unavailable'
+    if outcome == 'unavailable':
+        return jsonify({
+            'error': 'Unable to record your request right now. Please try again later.',
+        }), 503
+
+    payment_link = plan['payment_link']
+    return jsonify({
+        'status': 'ok',
+        'plan': plan['code'],
+        'plan_name': plan['name'],
+        'payment_link': payment_link,
+        'message': (
+            f"Payment link ready for {plan['name']}."
+            if payment_link else PRO_REQUEST_PENDING_MESSAGE
+        ),
+    })
 
 
 @api_bp.route('/contact', methods=['POST'])

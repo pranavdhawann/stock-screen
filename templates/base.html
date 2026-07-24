@@ -50,21 +50,23 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Top Navigation Bar -->
-    <nav class="top-nav" id="topNav">
-        <div class="top-nav-inner">
+    <!-- Side Navigation Rail (right-hand side; collapses to a top bar on mobile) -->
+    <nav class="side-nav" id="sideNav">
+        <div class="side-nav-inner">
+            <a class="nav-brand" href="{{ url_for('main.home') }}">STOCK SCREEN</a>
+
             <div class="nav-links" id="navLinks">
                 <a class="nav-link-item" href="{{ url_for('main.home') }}" data-tab="main">
                     <span>Markets</span>
+                </a>
+                <a class="nav-link-item" href="{{ url_for('main.track') }}">
+                    <span>Track</span>
                 </a>
                 <a class="nav-link-item" href="{{ url_for('main.sec_filings') }}">
                     <span>Company Filings</span>
                 </a>
                 <a class="nav-link-item" href="{{ url_for('main.forecasting') }}">
                     <span>Forecasting</span>
-                </a>
-                <a class="nav-link-item" href="{{ url_for('main.track_news') }}">
-                    <span>Track News</span>
                 </a>
                 <a class="nav-link-item" href="{{ url_for('main.about') }}">
                     <span>About</span>
@@ -169,19 +171,20 @@
         </div>
     </div>
 
-    <!-- Paid-tier Waitlist Modal -->
+    <!-- Pro Plans / Payment Link Modal -->
     <div id="waitlistModal" class="modal-overlay">
         <div class="modal-panel modal-panel--sm">
             <div class="modal-panel-header">
-                <span class="modal-panel-title">REQUEST PRO ACCESS</span>
+                <span class="modal-panel-title">GET PRO</span>
                 <button id="waitlistModalClose" type="button" class="modal-panel-close">&times;</button>
             </div>
             <div class="modal-panel-body">
                 <p class="modal-lead">
                     Pro adds higher analysis quotas, longer sentiment history, and priority
-                    forecasting. Leave your email and we'll invite you when it opens.
+                    forecasting. Choose a plan and we'll send you a payment link.
                 </p>
                 <form id="waitlistForm">
+                    <div class="plan-options" id="wlPlanOptions" role="radiogroup" aria-label="Pro plan"></div>
                     <div class="modal-field">
                         <input type="email" id="wlEmail" placeholder="Email" maxlength="254" required
                             autocomplete="email" class="modal-input">
@@ -190,9 +193,11 @@
                         <input type="text" id="wlWebsite" name="website" tabindex="-1" autocomplete="off">
                         <input type="text" id="wlCompany" name="company" tabindex="-1" autocomplete="off">
                     </div>
-                    <button type="submit" id="wlSubmitBtn" class="modal-submit-btn">REQUEST ACCESS</button>
+                    <button type="submit" id="wlSubmitBtn" class="modal-submit-btn">REQUEST PAYMENT LINK</button>
                 </form>
                 <div id="wlSuccess" class="modal-success-text"></div>
+                <a id="wlPayLink" class="modal-submit-btn modal-pay-link" href="#" target="_blank"
+                    rel="noopener noreferrer">CONTINUE TO CHECKOUT</a>
                 <div id="wlError" class="modal-error-text"></div>
             </div>
         </div>
@@ -223,7 +228,7 @@
     <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
     <script src="{{ url_for('static', filename='js/account.js') }}"></script>
     <script src="{{ url_for('static', filename='js/market-toggle.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/waitlist-modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pro-modal.js') }}"></script>
 
     {% block extra_scripts %}{% endblock %}
 
