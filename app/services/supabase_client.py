@@ -203,7 +203,7 @@ def get_user_by_email(email: str):
     try:
         result = (
             client.table("app_users")
-            .select("id,email,password_hash")
+            .select("id,email,password_hash,plan")
             .eq("email", email.strip().lower())
             .maybe_single()
             .execute()
@@ -288,6 +288,54 @@ def add_waitlist_email(email: str) -> str:
             return "duplicate"
         logger.error("Waitlist insert failed: %s", exc, exc_info=True)
         return "unavailable"
+
+
+def get_user_plan(user_id: str) -> str:
+    """Current entitlement tier for an account, defaulting to 'free'.
+
+    Read fresh rather than trusted from the session forever, so a plan change
+    lands on the next page load instead of requiring the user to sign out.
+    """
+    client = _get_client()
+    if not client:
+        return "free"
+    try:
+        result = (
+            client.table("app_users")
+            .select("plan")
+            .eq("id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        row = getattr(result, "data", None) or {}
+        return row.get("plan") or "free"
+    except Exception as exc:
+        logger.warning("Plan lookup failed: %s", exc)
+        return "free"
+
+
+def set_user_plan(email: str, plan: str):
+    """Move an account onto a plan. Returns the updated row, or None.
+
+    Deliberately has no HTTP route in front of it: plans are granted from the
+    server side (a migration, a console, or a maintenance script), never by a
+    request the account holder can make.
+    """
+    client = _get_client()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("app_users")
+            .update({"plan": plan})
+            .eq("email", email.strip().lower())
+            .execute()
+        )
+        rows = getattr(result, "data", None) or []
+        return rows[0] if rows else None
+    except Exception as exc:
+        logger.warning("Plan update failed: %s", exc)
+        return None
 
 
 def touch_user_login(user_id: str) -> None:

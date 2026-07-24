@@ -60,11 +60,26 @@
         });
     }
 
+    // Umami custom events. The page-view script is loaded by base.html only
+    // when UMAMI_WEBSITE_ID is configured, so window.umami is absent in local
+    // dev and on any deploy without analytics - callers must not have to care,
+    // and analytics must never be able to break a feature.
+    function trackEvent(name, data) {
+        try {
+            if (window.umami && typeof window.umami.track === 'function') {
+                window.umami.track(name, data || undefined);
+            }
+        } catch (error) {
+            /* analytics is strictly best-effort */
+        }
+    }
+
     window.StockScreenUtils = {
         escapeHtml,
         sanitizeSymbol,
         sanitizeUrl,
         fetchJson,
         showError,
+        trackEvent,
     };
 })();

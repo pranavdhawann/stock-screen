@@ -80,6 +80,10 @@ def _login_session(user):
     session.clear()
     session['uid'] = str(user['id'])
     session['email'] = user['email']
+    # Cached on the (signed, server-secret) session so the rate limiters can
+    # check entitlement without a Supabase round-trip per request. /auth/me
+    # refreshes it, which the front end calls on every page load.
+    session['plan'] = user.get('plan') or 'free'
     session.permanent = True
 
 
@@ -120,7 +124,7 @@ def signup():
         return jsonify({'error': 'Unable to create the account right now.'}), 502
 
     _login_session(user)
-    return jsonify({'status': 'ok', 'email': user['email']})
+    return jsonify({'status': 'ok', 'email': user['email'], 'plan': session['plan']})
 
 
 @account_bp.route('/auth/login', methods=['POST'])
@@ -150,7 +154,7 @@ def login():
 
     _login_session(user)
     sbc.touch_user_login(user['id'])
-    return jsonify({'status': 'ok', 'email': user['email']})
+    return jsonify({'status': 'ok', 'email': user['email'], 'plan': session['plan']})
 
 
 @account_bp.route('/auth/logout', methods=['POST'])
@@ -163,7 +167,19 @@ def logout():
 def me():
     if not session.get('uid'):
         return jsonify({'authenticated': False})
-    return jsonify({'authenticated': True, 'email': session.get('email')})
+
+    # Re-read the plan here (the one place the front end hits on every page
+    # load) so a grant or revocation takes effect without a re-login, while
+    # the hot request paths keep reading the cached session value.
+    sbc = _sbc()
+    if sbc:
+        session['plan'] = sbc.get_user_plan(session['uid'])
+
+    return jsonify({
+        'authenticated': True,
+        'email': session.get('email'),
+        'plan': session.get('plan') or 'free',
+    })
 
 
 @account_bp.route('/watchlist')

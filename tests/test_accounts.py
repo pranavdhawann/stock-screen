@@ -27,13 +27,30 @@ class FakeStore:
             # than returning None, so a duplicate is distinguishable from
             # a generic write failure.
             raise DuplicateEmailError(email)
-        user = {"id": f"user-{self.next_id}", "email": email, "password_hash": password_hash}
+        user = {
+            "id": f"user-{self.next_id}",
+            "email": email,
+            "password_hash": password_hash,
+            "plan": "free",
+        }
         self.next_id += 1
         self.users[email] = user
         return user
 
     def touch_user_login(self, user_id):
         pass
+
+    def get_user_plan(self, user_id):
+        for user in self.users.values():
+            if user["id"] == user_id:
+                return user.get("plan") or "free"
+        return "free"
+
+    def set_user_plan(self, email, plan):
+        user = self.users.get(email.strip().lower())
+        if user:
+            user["plan"] = plan
+        return user
 
     def get_watchlist(self, user_id):
         return [{"symbol": s} for s in self.watchlists.get(user_id, [])]

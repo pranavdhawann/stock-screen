@@ -108,6 +108,8 @@
             body: JSON.stringify({ symbol: clean }),
         }).then(function(data) {
             symbols = data.symbols || symbols;
+            var track = (window.StockScreenUtils || {}).trackEvent;
+            if (track) track('watchlist-add', { symbol: clean });
             refreshPrices();
             updateWatchButton();
         }).catch(function(error) {

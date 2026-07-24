@@ -9,12 +9,30 @@ app/routes/api.py, which meant app/routes/account.py had to import
 
 import logging
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 
 from app.config import TRUST_PROXY_HEADERS, TRUSTED_PROXY_HOPS
 from app.services.rate_limit import check_limit
 
 logger = logging.getLogger(__name__)
+
+# Plans that are exempt from request quotas. Membership is decided server-side
+# and stored in public.app_users.plan; the session copy is signed with the
+# app SECRET_KEY, so a client cannot promote itself by editing its cookie.
+UNLIMITED_PLANS = frozenset({"pro"})
+
+
+def has_unlimited_access():
+    """True when the signed-in account's plan lifts request quotas.
+
+    Anonymous callers and unknown plans always fall through to the limits -
+    an entitlement check that fails open would be a hole, not a convenience.
+    """
+    try:
+        return session.get("plan") in UNLIMITED_PLANS
+    except RuntimeError:
+        # No request/session context (background work, tests calling directly).
+        return False
 
 
 def client_key():
@@ -48,6 +66,8 @@ def rate_limit_payload(result):
 
 def consume_limit(bucket, limit, window_seconds, *, distributed=True):
     """Consume one unit of a bucket; returns a 429 response tuple or None."""
+    if has_unlimited_access():
+        return None
     result = check_limit(bucket, client_key(), limit, window_seconds, distributed=distributed)
     if not result.allowed:
         return jsonify(rate_limit_payload(result)), 429
@@ -78,7 +98,14 @@ def consume_tiered_limit(
     A request that passes the burst check but fails the quota still consumes a
     burst token. That is deliberate - it makes repeatedly probing a
     quota-exhausted endpoint get *more* expensive, not less.
+
+    Pro accounts skip both tiers, including the burst guard: the guard exists
+    to stop anonymous hammering, and an authenticated paid account is already
+    attributable.
     """
+    if has_unlimited_access():
+        return None
+
     key = client_key()
 
     burst = check_limit(

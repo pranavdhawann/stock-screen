@@ -41,6 +41,8 @@
                 }
                 select.value = market;
                 syncButtons(market);
+                var track = (window.StockScreenUtils || {}).trackEvent;
+                if (track) track('switch-market', { market: market });
                 select.dispatchEvent(new Event('change', { bubbles: true }));
             });
         });

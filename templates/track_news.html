@@ -43,6 +43,26 @@
             </div>
         </div>
     </div>
+
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-uppercase fw-bold mb-0 idx-section-label">
+                    STOCK NEWS
+                </h4>
+                <form id="stockNewsForm" class="d-flex gap-2">
+                    <input type="text" id="stockNewsInput" placeholder="TICKER" maxlength="16" autocomplete="off"
+                           class="idx-watchlist-input">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary idx-watchlist-add-btn">→</button>
+                </form>
+            </div>
+            <div class="card">
+                <div class="card-body p-0">
+                    <div id="stockNewsContainer" class="news-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
