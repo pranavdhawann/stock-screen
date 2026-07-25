@@ -114,10 +114,41 @@
         if (e.key === 'Escape' && modal.style.display === 'flex') window.closeWaitlistModal();
     });
 
-    // Any element can open the modal, not just the nav button, so pages can
-    // add their own upgrade CTAs without touching this file.
+    // Pro status modal: shown instead of the waitlist to users who already
+    // hold a Pro plan.
+    var statusModal = document.getElementById('proStatusModal');
+    var statusCloseBtn = document.getElementById('proStatusModalClose');
+    if (statusModal) {
+        window.openProStatusModal = function() {
+            statusModal.style.display = 'flex';
+        };
+        window.closeProStatusModal = function() {
+            statusModal.style.display = 'none';
+        };
+        if (statusCloseBtn) {
+            statusCloseBtn.addEventListener('click', window.closeProStatusModal);
+        }
+        statusModal.addEventListener('click', function(e) {
+            if (e.target === statusModal) window.closeProStatusModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && statusModal.style.display === 'flex') window.closeProStatusModal();
+        });
+    }
+
+    // Any element can open this, not just the nav button, so pages can add
+    // their own upgrade CTAs without touching this file. Accounts that
+    // already hold Pro see their status instead of being asked to request
+    // what they already have.
     document.querySelectorAll('[data-action="open-waitlist-modal"]').forEach(function(trigger) {
-        trigger.addEventListener('click', window.openWaitlistModal);
+        trigger.addEventListener('click', function() {
+            var auth = window.StockScreenAuth;
+            if (auth && auth.state.plan === 'pro' && window.openProStatusModal) {
+                window.openProStatusModal();
+            } else {
+                window.openWaitlistModal();
+            }
+        });
     });
 
     form.addEventListener('submit', function(e) {

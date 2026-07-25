@@ -143,8 +143,8 @@
                 <div class="card-header fc-card-header-pad">Run Policy</div>
                 <div class="card-body fc-policy-body">
                     <div class="fc-policy-box">
-                        <div class="fc-policy-title">Free Access</div>
-                        <div class="fc-policy-text">Each user gets 1 free forecast run. After that, forecasting is subscription-gated.</div>
+                        <div class="fc-policy-title" id="forecastPolicyTitle">Free Access</div>
+                        <div class="fc-policy-text" id="forecastPolicyText">Each user gets 1 free forecast run. After that, forecasting is subscription-gated.</div>
                     </div>
                 </div>
             </div>
@@ -191,6 +191,8 @@
     const bearCaseEl = document.getElementById('forecastBearCase');
     const tableBodyEl = document.getElementById('forecastTableBody');
     const forecastChartCanvas = document.getElementById('forecastChart');
+    const policyTitleEl = document.getElementById('forecastPolicyTitle');
+    const policyTextEl = document.getElementById('forecastPolicyText');
     const gateModal = document.getElementById('forecastGateModal');
     const gateCloseBtn = document.getElementById('forecastGateClose');
     const gateAcknowledgeBtn = document.getElementById('forecastGateAcknowledge');
@@ -218,7 +220,19 @@
         return Number(forecastStatus.remaining || 0) > 0;
     }
 
+    function updatePolicyBox() {
+        if (!policyTitleEl || !policyTextEl) return;
+        if (forecastStatus.unlimited) {
+            policyTitleEl.textContent = 'Unlimited Access';
+            policyTextEl.textContent = 'Your Pro plan includes unlimited forecast runs.';
+        } else {
+            policyTitleEl.textContent = 'Free Access';
+            policyTextEl.textContent = 'Each user gets 1 free forecast run. After that, forecasting is subscription-gated.';
+        }
+    }
+
     function updateUsageLabel() {
+        updatePolicyBox();
         if (isLocalTesting()) {
             usageLabel.textContent = 'Local testing mode';
             return;

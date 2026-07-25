@@ -13,6 +13,13 @@
     var toggleBtn = document.getElementById('authToggleMode');
     var closeBtn = document.getElementById('authModalClose');
     var accountBtn = document.getElementById('accountBtn');
+    var accountMenu = document.getElementById('accountMenu');
+    var accountIconBtn = document.getElementById('accountIconBtn');
+    var accountDropdown = document.getElementById('accountDropdown');
+    var accountDropdownEmail = document.getElementById('accountDropdownEmail');
+    var accountDropdownPlan = document.getElementById('accountDropdownPlan');
+    var accountDropdownPro = document.getElementById('accountDropdownPro');
+    var accountDropdownSignOut = document.getElementById('accountDropdownSignOut');
     var fetchJson = (window.StockScreenUtils || {}).fetchJson;
 
     if (!modal || !form || !accountBtn || !fetchJson) return;
@@ -32,13 +39,17 @@
         if (!waitlistBtn) return;
         if (state.plan === 'pro') {
             waitlistBtn.textContent = 'PRO';
-            waitlistBtn.disabled = true;
-            waitlistBtn.title = 'Pro plan active - unlimited access';
+            waitlistBtn.title = 'Pro plan active - click to view your plan';
         } else {
             waitlistBtn.textContent = 'GET PRO';
-            waitlistBtn.disabled = false;
             waitlistBtn.title = '';
         }
+    }
+
+    function closeAccountDropdown() {
+        if (!accountDropdown || !accountIconBtn) return;
+        accountDropdown.classList.remove('open');
+        accountIconBtn.setAttribute('aria-expanded', 'false');
     }
 
     function setState(authenticated, email, plan) {
@@ -48,12 +59,21 @@
             plan: (authenticated && plan) || 'free',
         };
         if (state.authenticated) {
-            var name = String(state.email || '').split('@')[0];
-            accountBtn.textContent = 'SIGN OUT · ' + name.slice(0, 14).toUpperCase();
-            accountBtn.title = 'Signed in as ' + state.email + ' — click to sign out';
+            accountBtn.style.display = 'none';
+            if (accountMenu) accountMenu.classList.add('open');
+            if (accountDropdownEmail) accountDropdownEmail.textContent = state.email || '';
+            if (accountDropdownPlan) {
+                var isPro = state.plan === 'pro';
+                accountDropdownPlan.textContent = isPro ? 'PRO' : 'FREE';
+                accountDropdownPlan.classList.toggle('is-pro', isPro);
+            }
+            if (accountIconBtn) accountIconBtn.title = 'Signed in as ' + state.email;
         } else {
+            accountBtn.style.display = '';
             accountBtn.textContent = 'SIGN IN';
             accountBtn.title = 'Sign in or create an account';
+            if (accountMenu) accountMenu.classList.remove('open');
+            closeAccountDropdown();
         }
         updateProBadge();
         emitChange();
@@ -93,14 +113,39 @@
     }
 
     accountBtn.addEventListener('click', function() {
-        if (!state.authenticated) {
-            openModal();
-            return;
-        }
+        openModal();
+    });
+
+    function signOut() {
+        closeAccountDropdown();
         fetchJson('/api/auth/logout', { method: 'POST' })
             .catch(function() {})
             .then(function() { setState(false, null); });
-    });
+    }
+
+    if (accountIconBtn && accountDropdown) {
+        accountIconBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = accountDropdown.classList.toggle('open');
+            accountIconBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+        document.addEventListener('click', function(e) {
+            if (!accountDropdown.classList.contains('open')) return;
+            if (accountMenu && !accountMenu.contains(e.target)) closeAccountDropdown();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && accountDropdown.classList.contains('open')) closeAccountDropdown();
+        });
+    }
+    if (accountDropdownSignOut) {
+        accountDropdownSignOut.addEventListener('click', signOut);
+    }
+    if (accountDropdownPro) {
+        accountDropdownPro.addEventListener('click', function() {
+            closeAccountDropdown();
+            if (waitlistBtn) waitlistBtn.click();
+        });
+    }
 
     closeBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', function(e) {

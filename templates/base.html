@@ -91,6 +91,27 @@
                 <button class="nav-waitlist-btn" id="waitlistBtn" type="button"
                     data-action="open-waitlist-modal">GET PRO</button>
                 <button class="nav-auth-btn" id="accountBtn" type="button">SIGN IN</button>
+                <div class="account-menu" id="accountMenu">
+                    <button class="account-icon-btn" id="accountIconBtn" type="button"
+                        aria-haspopup="true" aria-expanded="false" title="Account">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </button>
+                    <div class="account-dropdown" id="accountDropdown" role="menu">
+                        <div class="account-dropdown-email" id="accountDropdownEmail"></div>
+                        <span class="account-dropdown-plan" id="accountDropdownPlan"></span>
+                        <button class="account-dropdown-item" id="accountDropdownPro" type="button" role="menuitem">
+                            View Pro status
+                        </button>
+                        <button class="account-dropdown-item account-dropdown-item--danger" id="accountDropdownSignOut"
+                            type="button" role="menuitem">
+                            Sign out
+                        </button>
+                    </div>
+                </div>
                 <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
                     MENU
                 </button>
@@ -180,8 +201,8 @@
             </div>
             <div class="modal-panel-body">
                 <p class="modal-lead">
-                    Pro adds higher analysis quotas, longer sentiment history, and priority
-                    forecasting. Choose a plan and we'll send you a payment link.
+                    Upgrade to Premium by contacting us or joining the waitlist below.
+                    Choose a plan and we'll send you a payment link.
                 </p>
                 <form id="waitlistForm">
                     <div class="plan-options" id="wlPlanOptions" role="radiogroup" aria-label="Pro plan"></div>
@@ -199,6 +220,26 @@
                 <a id="wlPayLink" class="modal-submit-btn modal-pay-link" href="#" target="_blank"
                     rel="noopener noreferrer">CONTINUE TO CHECKOUT</a>
                 <div id="wlError" class="modal-error-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pro Status Modal (shown to already-Pro users instead of the waitlist) -->
+    <div id="proStatusModal" class="modal-overlay">
+        <div class="modal-panel modal-panel--sm">
+            <div class="modal-panel-header">
+                <span class="modal-panel-title">PRO STATUS</span>
+                <button id="proStatusModalClose" type="button" class="modal-panel-close">&times;</button>
+            </div>
+            <div class="modal-panel-body">
+                <p class="modal-lead">You're on Pro. Enjoy advanced features.</p>
+                <p class="modal-lead">
+                    Pro unlocks unlimited forecasting runs, extended sentiment history, and
+                    priority analysis queues. You get full access to real-time US and India
+                    market data, AI-powered sentiment scoring, multi-source news aggregation,
+                    and SEC filing summaries (10-K, 10-Q, 8-K) — with higher quotas
+                    everywhere, so nothing in Stock Screen is rate-limited for you.
+                </p>
             </div>
         </div>
     </div>
