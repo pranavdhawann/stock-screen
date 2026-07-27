@@ -8,7 +8,7 @@ whole suite stayed green. These tests walk the real routes.
 import pytest
 
 
-PAGES = ["/", "/sec-filings", "/forecasting", "/track", "/about"]
+PAGES = ["/", "/sec-filings", "/forecasting", "/track", "/about", "/profile"]
 
 # Pages that draw charts and therefore must pull in Chart.js; everything else
 # must NOT, since that is the point of base.html's chart_libs block.
@@ -58,14 +58,69 @@ def test_no_font_awesome_or_cdnjs_references_remain(client, path):
 
 
 @pytest.mark.parametrize("path", PAGES)
-def test_pro_cta_and_modal_are_available_site_wide(client, path):
+def test_no_pro_modal_remains_anywhere(client, path):
+    """Buying Pro lives on one page now; the site-wide modals are gone."""
     body = client.get(path).get_data(as_text=True)
 
-    assert 'data-action="open-waitlist-modal"' in body
-    assert 'id="waitlistModal"' in body
-    assert "js/pro-modal.js" in body
-    # The modal must offer a plan picker, not just an email capture.
-    assert 'id="wlPlanOptions"' in body
+    assert 'id="waitlistModal"' not in body
+    assert 'id="proStatusModal"' not in body
+    assert "js/pro-modal.js" not in body
+    assert "open-waitlist-modal" not in body
+
+
+@pytest.mark.parametrize("path", PAGES)
+def test_nav_pro_entry_is_a_badge_not_a_button(client, path):
+    """Plan is reported in the nav; buying happens on the profile page."""
+    body = client.get(path).get_data(as_text=True)
+    nav = body[body.index('id="navLinks"'):body.index('class="nav-actions"')]
+
+    assert 'id="navPlanBadge"' in nav
+    assert "<button" not in nav
+
+
+@pytest.mark.parametrize("path", PAGES)
+def test_profile_is_a_nav_link_to_its_own_page(client, path):
+    body = client.get(path).get_data(as_text=True)
+    nav = body[body.index('id="navLinks"'):body.index('class="nav-actions"')]
+
+    assert '<a class="nav-link-item" id="accountBtn" href="/profile"' in nav
+    # The dropdown that used to open inside the rail is gone.
+    assert 'id="accountDropdown"' not in body
+
+
+def test_profile_page_hosts_account_and_pro_upgrade(client):
+    body = client.get("/profile").get_data(as_text=True)
+
+    assert "js/profile.js" in body
+    assert 'id="profileSignOutBtn"' in body
+    assert 'id="profilePlanBadge"' in body
+    # The plan picker and payment-link form moved here from the nav's modal.
+    assert 'id="profilePlanOptions"' in body
+    assert 'id="profileProForm"' in body
+
+
+def test_plan_picker_is_not_gated_behind_sign_in(client):
+    """Anyone following a "view pro plans" link must land on a usable picker.
+
+    The catalogue is public and the form only needs an email, so the plans
+    card starts visible and sits outside the signed-in/signed-out branches.
+    """
+    body = client.get("/profile").get_data(as_text=True)
+    plans_card = body[body.index('id="profilePlans"'):body.index('id="profileProForm"')]
+
+    assert "idx-hidden" not in plans_card
+    # The account cards still are gated; only the picker is not.
+    assert 'class="row mb-4 idx-hidden" id="profileSignedIn"' in body
+    assert 'class="row mb-4 idx-hidden" id="profileProStatus"' in body
+    assert 'id="plans"' in body
+
+
+def test_about_plans_card_links_to_the_profile_plan_picker(client):
+    """About's PLANS CTA navigates now; it used to raise the plans modal."""
+    body = client.get("/about").get_data(as_text=True)
+    plans = body[body.index("PLANS"):body.index("VIEW PRO PLANS")]
+
+    assert 'href="/profile#plans"' in plans
 
 
 def test_track_news_url_still_resolves(client):

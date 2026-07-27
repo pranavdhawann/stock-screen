@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Stock Screen{% endblock %}
+
+{% block seo %}
+<meta name="description" content="Your Stock Screen account: session details, plan status, and Pro upgrade options.">
+<meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+<div class="title-section">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-10">
+                <h1 class="main-title">Profile</h1>
+                <p class="main-subtitle">Your account and plan</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{#
+    Three states, all rendered server-side and toggled by profile.js once
+    /api/auth/me answers: loading, signed out, signed in. Doing it this way
+    keeps the page a plain cached template - the session is never baked into
+    the HTML.
+#}
+<div class="container py-4">
+
+    <div class="row mb-4" id="profileLoading">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-body about-card-body">
+                    <p class="mb-0 about-intro-text-secondary">Loading your account&hellip;</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signed out -->
+    <div class="row mb-4 idx-hidden" id="profileSignedOut">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-header about-card-header">
+                    <span class="about-section-label">NOT SIGNED IN</span>
+                </div>
+                <div class="card-body about-card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <p class="mb-0 about-contact-text">
+                                Sign in to see your plan, manage your watchlist, and upgrade to Pro.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <button class="btn btn-outline-primary about-contact-btn" type="button"
+                                id="profileSignInBtn">
+                                SIGN IN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signed in -->
+    <div class="row mb-4 idx-hidden" id="profileSignedIn">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-header about-card-header">
+                    <span class="about-section-label">ACCOUNT</span>
+                </div>
+                <div class="card-body about-card-body">
+                    <div class="profile-field">
+                        <span class="profile-field-label">Email</span>
+                        <span class="profile-field-value" id="profileEmail"></span>
+                    </div>
+                    <div class="profile-field">
+                        <span class="profile-field-label">Plan</span>
+                        <span class="profile-plan-badge" id="profilePlanBadge">FREE</span>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-outline-primary about-contact-btn profile-signout-btn"
+                            type="button" id="profileSignOutBtn">
+                            SIGN OUT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pro status (already on Pro) -->
+    <div class="row mb-4 idx-hidden" id="profileProStatus">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced">
+                <div class="card-header about-card-header">
+                    <span class="about-section-label">PRO STATUS</span>
+                </div>
+                <div class="card-body about-card-body">
+                    <p class="about-intro-text">You're on Pro. Enjoy advanced features.</p>
+                    <p class="mb-0 about-intro-text-secondary">
+                        Pro unlocks unlimited forecasting runs, extended sentiment history, and
+                        priority analysis queues. You get full access to real-time US and India
+                        market data, AI-powered sentiment scoring, multi-source news aggregation,
+                        and SEC filing summaries (10-K, 10-Q, 8-K) &mdash; with higher quotas
+                        everywhere, so nothing in Stock Screen is rate-limited for you.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {#
+        Plans. Deliberately outside every signed-in/signed-out branch: the
+        catalogue is public and the form only needs an email, so anyone who
+        followed a "view pro plans" link lands on a usable picker — signed
+        out, on free, or already on Pro. Only the lead copy varies.
+
+        No card details are handled here: submitting records the request and,
+        when the operator has configured one, surfaces a hosted checkout link
+        to click. #plans is the anchor About links to.
+    #}
+    <div class="row mb-4" id="profilePlans">
+        <div class="col-lg-10 mx-auto">
+            <div class="card card-enhanced" id="plans">
+                <div class="card-header about-card-header">
+                    <span class="about-section-label">PRO PLANS</span>
+                </div>
+                <div class="card-body about-card-body">
+                    <p class="about-intro-text-secondary" id="profilePlansLead">
+                        Choose a plan and we'll send you a payment link.
+                    </p>
+                    <form id="profileProForm">
+                        <div class="plan-options" id="profilePlanOptions" role="radiogroup"
+                            aria-label="Pro plan"></div>
+                        <div class="modal-field">
+                            <input type="email" id="profileProEmail" placeholder="Email" maxlength="254"
+                                required autocomplete="email" class="modal-input">
+                        </div>
+                        <div class="modal-honeypot" aria-hidden="true">
+                            <input type="text" id="profileProWebsite" name="website" tabindex="-1"
+                                autocomplete="off">
+                            <input type="text" id="profileProCompany" name="company" tabindex="-1"
+                                autocomplete="off">
+                        </div>
+                        <button type="submit" id="profileProSubmit" class="modal-submit-btn">
+                            REQUEST PAYMENT LINK
+                        </button>
+                    </form>
+                    <div id="profileProSuccess" class="modal-success-text"></div>
+                    <a id="profileProPayLink" class="modal-submit-btn modal-pay-link" href="#" target="_blank"
+                        rel="noopener noreferrer">CONTINUE TO CHECKOUT</a>
+                    <div id="profileProError" class="modal-error-text"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

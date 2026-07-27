@@ -311,86 +311,83 @@ body::after {
     color: var(--negative);
 }
 
-/* Profile nav item wrapper — exists only to anchor the dropdown; the
-   button inside it is a plain .nav-link-item like every other entry. */
-.nav-profile {
-    position: relative;
-}
-
-.account-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    min-width: 200px;
-    max-width: calc(100vw - 24px);
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    padding: 10px;
-    z-index: calc(var(--z-dropdown) + 3);
-}
-
-.account-dropdown.open {
-    display: block;
-}
-
-.account-dropdown-email {
+/* Plan badge riding on the Profile nav item. A status marker, not a
+   control — no hover or focus treatment of its own, and it inherits the
+   item's click target. Upgrading happens on the profile page. */
+.nav-plan-badge {
+    margin-left: auto;
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 0 4px;
+    line-height: 1.5;
+}
+
+.nav-plan-badge.is-pro {
+    color: var(--accent-amber);
+    border-color: var(--accent-amber);
+}
+
+.nav-link-item:hover .nav-plan-badge,
+.nav-link-item.active .nav-plan-badge {
+    color: var(--accent-amber);
+    border-color: var(--accent-amber);
+}
+
+/* Profile page */
+.profile-field {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-field-label {
+    flex: 0 0 90px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.profile-field-value {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
     color: var(--text-primary);
     word-break: break-all;
-    margin-bottom: 4px;
 }
 
-.account-dropdown-plan {
+.profile-plan-badge {
     display: inline-block;
     font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-muted);
     border: 1px solid var(--border);
     padding: 1px 6px;
-    margin-bottom: 8px;
 }
 
-.account-dropdown-plan.is-pro {
+.profile-plan-badge.is-pro {
     color: var(--accent-amber);
     border-color: var(--accent-amber);
 }
 
-.account-dropdown-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    border-top: 1px solid var(--border);
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    padding: 8px 2px 0;
+.profile-actions {
+    margin-top: 16px;
 }
 
-.account-dropdown-item:hover {
-    color: var(--accent-amber);
-}
-
-.account-dropdown-item--danger:hover {
+.profile-signout-btn:hover {
     color: var(--negative);
-}
-
-/* Paid-tier entry. Now a nav item rather than a filled CTA, so it keeps
-   the menu's geometry and earns its prominence from colour and weight
-   alone — amber at rest, where the page links are muted. */
-.nav-link-item--pro {
-    color: var(--accent-amber);
-    font-weight: 700;
+    border-color: var(--negative);
 }
 
 .nav-hamburger {
@@ -2278,7 +2275,7 @@ body,
     padding: 10px 0 0;
 }
 
-/* Rendered inside the plan list rather than the modal's error slot, so a
+/* Rendered inside the plan list rather than the form's error slot, so a
    failed catalogue fetch doesn't look like a form validation error. */
 .modal-error-text--inline {
     padding: 0 0 12px;
@@ -2286,7 +2283,7 @@ body,
 
 /* Checkout hand-off. Styled as the primary button but it is an <a>: the user
    clicks through to the payment provider's own page. Hidden until a link
-   comes back (pro-modal.js clears the inline display). */
+   comes back (profile.js clears the inline display). */
 .modal-pay-link {
     display: none;
     text-align: center;

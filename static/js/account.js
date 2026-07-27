@@ -1,6 +1,6 @@
 // Account sign-in/sign-up modal and session state.
-// Exposes window.StockScreenAuth = { state, open } and fires an
-// 'auth:changed' event whenever the signed-in user changes.
+// Exposes window.StockScreenAuth = { state, open, signOut, ready } and fires
+// an 'auth:changed' event whenever the signed-in user changes.
 (function() {
     var modal = document.getElementById('authModal');
     var form = document.getElementById('authForm');
@@ -14,12 +14,7 @@
     var closeBtn = document.getElementById('authModalClose');
     var accountBtn = document.getElementById('accountBtn');
     var accountBtnLabel = document.getElementById('accountBtnLabel');
-    var accountMenu = document.getElementById('accountMenu');
-    var accountDropdown = document.getElementById('accountDropdown');
-    var accountDropdownEmail = document.getElementById('accountDropdownEmail');
-    var accountDropdownPlan = document.getElementById('accountDropdownPlan');
-    var accountDropdownPro = document.getElementById('accountDropdownPro');
-    var accountDropdownSignOut = document.getElementById('accountDropdownSignOut');
+    var navPlanBadge = document.getElementById('navPlanBadge');
     var fetchJson = (window.StockScreenUtils || {}).fetchJson;
 
     if (!modal || !form || !accountBtn || !fetchJson) return;
@@ -31,31 +26,15 @@
         window.dispatchEvent(new CustomEvent('auth:changed', { detail: state }));
     }
 
-    // "GET PRO" is a waitlist prompt; an account that already has pro should
-    // see its status instead of being asked to request what it holds. The
-    // label lives in its own span so rewriting it can't clobber the nav
-    // item's markup.
-    var waitlistBtn = document.getElementById('waitlistBtn');
-    var waitlistBtnLabel = document.getElementById('waitlistBtnLabel');
-
+    // The plan is reported next to the Profile item as a badge, not a
+    // control — it states what you have; upgrading happens on /profile.
+    // Hidden while signed out, when there is no plan to report.
     function updateProBadge() {
-        if (!waitlistBtn || !waitlistBtnLabel) return;
-        if (state.plan === 'pro') {
-            waitlistBtnLabel.textContent = 'Pro';
-            waitlistBtn.title = 'Pro plan active - click to view your plan';
-        } else {
-            waitlistBtnLabel.textContent = 'Get Pro';
-            waitlistBtn.title = '';
-        }
-    }
-
-    // The dropdown hangs off the Profile nav item, so the item carries the
-    // same .active treatment as a current page while its panel is open.
-    function closeAccountDropdown() {
-        if (!accountDropdown) return;
-        accountDropdown.classList.remove('open');
-        accountBtn.classList.remove('active');
-        accountBtn.setAttribute('aria-expanded', 'false');
+        if (!navPlanBadge) return;
+        var isPro = state.plan === 'pro';
+        navPlanBadge.hidden = !state.authenticated;
+        navPlanBadge.textContent = isPro ? 'Pro' : 'Free';
+        navPlanBadge.classList.toggle('is-pro', isPro);
     }
 
     function setState(authenticated, email, plan) {
@@ -67,16 +46,9 @@
         if (state.authenticated) {
             if (accountBtnLabel) accountBtnLabel.textContent = 'Profile';
             accountBtn.title = 'Signed in as ' + state.email;
-            if (accountDropdownEmail) accountDropdownEmail.textContent = state.email || '';
-            if (accountDropdownPlan) {
-                var isPro = state.plan === 'pro';
-                accountDropdownPlan.textContent = isPro ? 'PRO' : 'FREE';
-                accountDropdownPlan.classList.toggle('is-pro', isPro);
-            }
         } else {
             if (accountBtnLabel) accountBtnLabel.textContent = 'Sign In';
             accountBtn.title = 'Sign in or create an account';
-            closeAccountDropdown();
         }
         updateProBadge();
         emitChange();
@@ -115,44 +87,19 @@
         modal.style.display = 'none';
     }
 
-    // One nav item, two destinations: the sign-in modal when signed out,
-    // the account panel when signed in.
+    // The nav item is a real link to /profile. Signed out there is nothing to
+    // show there yet, so the click is intercepted and the auth modal opens
+    // instead — the href stays as the no-JS fallback.
     accountBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (!state.authenticated) {
-            openModal();
-            return;
-        }
-        if (!accountDropdown) return;
-        var isOpen = accountDropdown.classList.toggle('open');
-        accountBtn.classList.toggle('active', isOpen);
-        accountBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (state.authenticated) return;
+        e.preventDefault();
+        openModal();
     });
 
     function signOut() {
-        closeAccountDropdown();
-        fetchJson('/api/auth/logout', { method: 'POST' })
+        return fetchJson('/api/auth/logout', { method: 'POST' })
             .catch(function() {})
             .then(function() { setState(false, null); });
-    }
-
-    if (accountDropdown) {
-        document.addEventListener('click', function(e) {
-            if (!accountDropdown.classList.contains('open')) return;
-            if (accountMenu && !accountMenu.contains(e.target)) closeAccountDropdown();
-        });
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && accountDropdown.classList.contains('open')) closeAccountDropdown();
-        });
-    }
-    if (accountDropdownSignOut) {
-        accountDropdownSignOut.addEventListener('click', signOut);
-    }
-    if (accountDropdownPro) {
-        accountDropdownPro.addEventListener('click', function() {
-            closeAccountDropdown();
-            if (waitlistBtn) waitlistBtn.click();
-        });
     }
 
     closeBtn.addEventListener('click', closeModal);
@@ -196,13 +143,19 @@
         });
     });
 
-    // Restore session state on page load.
-    fetchJson('/api/auth/me')
+    // Restore session state on page load. Pages that render differently for
+    // signed-in users (the profile page) wait on `ready` rather than assuming
+    // the pre-fetch default of signed-out is the truth.
+    var ready = fetchJson('/api/auth/me')
         .then(function(data) { setState(data.authenticated, data.email, data.plan); })
         .catch(function() { setState(false, null); });
 
     window.StockScreenAuth = {
         get state() { return state; },
         open: openModal,
+        ready: ready,
+        // Sign-out lives on the profile page now, but the session call and the
+        // state broadcast stay here so there is one owner of both.
+        signOut: signOut,
     };
 })();

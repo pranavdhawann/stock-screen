@@ -43,6 +43,17 @@ def track():
     return render_template('track.html')
 
 
+@main_bp.route('/profile')
+def profile():
+    """Account page.
+
+    Renders for signed-out visitors too - the page prompts for sign-in
+    client-side rather than redirecting, so the nav item behaves like every
+    other link instead of bouncing.
+    """
+    return render_template('profile.html')
+
+
 @main_bp.route('/track-news')
 def track_news_legacy():
     """Permanent redirect for the page's former URL.

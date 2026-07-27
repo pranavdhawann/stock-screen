@@ -11,9 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
             this.textContent = navLinks.classList.contains('show') ? 'CLOSE' : 'MENU';
         });
 
-        // Only page links dismiss the mobile menu. Pro and Profile are
-        // <button> items that open a panel anchored inside this menu, so
-        // collapsing it on their click would hide what they just opened.
+        // Every entry is a page link now (Profile included), so any click
+        // dismisses the mobile menu.
         navLinks.querySelectorAll('a.nav-link-item').forEach(link => {
             link.addEventListener('click', function() {
                 if (window.innerWidth <= 768) {
