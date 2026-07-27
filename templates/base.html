@@ -12,11 +12,18 @@
     <meta property="og:description" content="AI-powered stock sentiment analysis, SEC filing summaries, and multi-source news intelligence.">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Stock Screen">
+    <meta property="og:image" content="{{ url_for('static', filename='img/logo.jpg', _external=True) }}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Stock Screen - Real-time News & Market Intelligence">
     <meta name="twitter:description" content="AI-powered stock sentiment analysis, SEC filing summaries, and multi-source news intelligence.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='img/logo.jpg', _external=True) }}">
     {% endblock %}
     {% block canonical %}{% endblock %}
+
+    <!-- Favicon. Same asset as the nav brand mark, so the tab icon and the
+         rail stay in sync when the logo is replaced. -->
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='img/logo.jpg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.jpg') }}">
 
     <!-- JSON-LD Schema -->
     <script type="application/ld+json" nonce="{{ csp_nonce }}">
@@ -53,7 +60,11 @@
     <!-- Side Navigation Rail (right-hand side; collapses to a top bar on mobile) -->
     <nav class="side-nav" id="sideNav">
         <div class="side-nav-inner">
-            <a class="nav-brand" href="{{ url_for('main.home') }}">STOCK SCREEN</a>
+            <a class="nav-brand" href="{{ url_for('main.home') }}">
+                <img class="nav-brand-logo" src="{{ url_for('static', filename='img/logo.jpg') }}"
+                    alt="" width="22" height="22">
+                <span class="nav-brand-text">STOCK SCREEN</span>
+            </a>
 
             <div class="nav-links" id="navLinks">
                 <a class="nav-link-item" href="{{ url_for('main.home') }}" data-tab="main">
@@ -71,6 +82,36 @@
                 <a class="nav-link-item" href="{{ url_for('main.about') }}">
                     <span>About</span>
                 </a>
+
+                {#
+                    Pro and Profile used to sit at the bottom of the rail as a
+                    filled CTA and an icon button. They're ordinary nav items
+                    now — same typography, padding, hover and active treatment
+                    as the page links above — so the rail reads as one menu.
+                    Both are <button>s because their destinations are panels,
+                    not routes; .nav-link-item normalises button chrome.
+                #}
+                <button class="nav-link-item nav-link-item--pro" id="waitlistBtn" type="button"
+                    data-action="open-waitlist-modal">
+                    <span id="waitlistBtnLabel">Get Pro</span>
+                </button>
+                <div class="nav-profile" id="accountMenu">
+                    <button class="nav-link-item" id="accountBtn" type="button"
+                        aria-haspopup="true" aria-expanded="false" aria-controls="accountDropdown">
+                        <span id="accountBtnLabel">Sign In</span>
+                    </button>
+                    <div class="account-dropdown" id="accountDropdown" role="menu">
+                        <div class="account-dropdown-email" id="accountDropdownEmail"></div>
+                        <span class="account-dropdown-plan" id="accountDropdownPlan"></span>
+                        <button class="account-dropdown-item" id="accountDropdownPro" type="button" role="menuitem">
+                            View Pro status
+                        </button>
+                        <button class="account-dropdown-item account-dropdown-item--danger" id="accountDropdownSignOut"
+                            type="button" role="menuitem">
+                            Sign out
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="nav-actions">
@@ -87,30 +128,6 @@
                 <div class="status-indicator" id="statusIndicator">
                     <span class="status-dot" id="statusDot" title="Connected"></span>
                     <span class="status-label" id="statusLabel"></span>
-                </div>
-                <button class="nav-waitlist-btn" id="waitlistBtn" type="button"
-                    data-action="open-waitlist-modal">GET PRO</button>
-                <button class="nav-auth-btn" id="accountBtn" type="button">SIGN IN</button>
-                <div class="account-menu" id="accountMenu">
-                    <button class="account-icon-btn" id="accountIconBtn" type="button"
-                        aria-haspopup="true" aria-expanded="false" title="Account">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </button>
-                    <div class="account-dropdown" id="accountDropdown" role="menu">
-                        <div class="account-dropdown-email" id="accountDropdownEmail"></div>
-                        <span class="account-dropdown-plan" id="accountDropdownPlan"></span>
-                        <button class="account-dropdown-item" id="accountDropdownPro" type="button" role="menuitem">
-                            View Pro status
-                        </button>
-                        <button class="account-dropdown-item account-dropdown-item--danger" id="accountDropdownSignOut"
-                            type="button" role="menuitem">
-                            Sign out
-                        </button>
-                    </div>
                 </div>
                 <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation">
                     MENU

@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
             this.textContent = navLinks.classList.contains('show') ? 'CLOSE' : 'MENU';
         });
 
-        navLinks.querySelectorAll('.nav-link-item').forEach(link => {
+        // Only page links dismiss the mobile menu. Pro and Profile are
+        // <button> items that open a panel anchored inside this menu, so
+        // collapsing it on their click would hide what they just opened.
+        navLinks.querySelectorAll('a.nav-link-item').forEach(link => {
             link.addEventListener('click', function() {
                 if (window.innerWidth <= 768) {
                     navLinks.classList.remove('show');

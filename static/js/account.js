@@ -13,8 +13,8 @@
     var toggleBtn = document.getElementById('authToggleMode');
     var closeBtn = document.getElementById('authModalClose');
     var accountBtn = document.getElementById('accountBtn');
+    var accountBtnLabel = document.getElementById('accountBtnLabel');
     var accountMenu = document.getElementById('accountMenu');
-    var accountIconBtn = document.getElementById('accountIconBtn');
     var accountDropdown = document.getElementById('accountDropdown');
     var accountDropdownEmail = document.getElementById('accountDropdownEmail');
     var accountDropdownPlan = document.getElementById('accountDropdownPlan');
@@ -32,24 +32,30 @@
     }
 
     // "GET PRO" is a waitlist prompt; an account that already has pro should
-    // see its status instead of being asked to request what it holds.
+    // see its status instead of being asked to request what it holds. The
+    // label lives in its own span so rewriting it can't clobber the nav
+    // item's markup.
     var waitlistBtn = document.getElementById('waitlistBtn');
+    var waitlistBtnLabel = document.getElementById('waitlistBtnLabel');
 
     function updateProBadge() {
-        if (!waitlistBtn) return;
+        if (!waitlistBtn || !waitlistBtnLabel) return;
         if (state.plan === 'pro') {
-            waitlistBtn.textContent = 'PRO';
+            waitlistBtnLabel.textContent = 'Pro';
             waitlistBtn.title = 'Pro plan active - click to view your plan';
         } else {
-            waitlistBtn.textContent = 'GET PRO';
+            waitlistBtnLabel.textContent = 'Get Pro';
             waitlistBtn.title = '';
         }
     }
 
+    // The dropdown hangs off the Profile nav item, so the item carries the
+    // same .active treatment as a current page while its panel is open.
     function closeAccountDropdown() {
-        if (!accountDropdown || !accountIconBtn) return;
+        if (!accountDropdown) return;
         accountDropdown.classList.remove('open');
-        accountIconBtn.setAttribute('aria-expanded', 'false');
+        accountBtn.classList.remove('active');
+        accountBtn.setAttribute('aria-expanded', 'false');
     }
 
     function setState(authenticated, email, plan) {
@@ -59,20 +65,17 @@
             plan: (authenticated && plan) || 'free',
         };
         if (state.authenticated) {
-            accountBtn.style.display = 'none';
-            if (accountMenu) accountMenu.classList.add('open');
+            if (accountBtnLabel) accountBtnLabel.textContent = 'Profile';
+            accountBtn.title = 'Signed in as ' + state.email;
             if (accountDropdownEmail) accountDropdownEmail.textContent = state.email || '';
             if (accountDropdownPlan) {
                 var isPro = state.plan === 'pro';
                 accountDropdownPlan.textContent = isPro ? 'PRO' : 'FREE';
                 accountDropdownPlan.classList.toggle('is-pro', isPro);
             }
-            if (accountIconBtn) accountIconBtn.title = 'Signed in as ' + state.email;
         } else {
-            accountBtn.style.display = '';
-            accountBtn.textContent = 'SIGN IN';
+            if (accountBtnLabel) accountBtnLabel.textContent = 'Sign In';
             accountBtn.title = 'Sign in or create an account';
-            if (accountMenu) accountMenu.classList.remove('open');
             closeAccountDropdown();
         }
         updateProBadge();
@@ -112,8 +115,18 @@
         modal.style.display = 'none';
     }
 
-    accountBtn.addEventListener('click', function() {
-        openModal();
+    // One nav item, two destinations: the sign-in modal when signed out,
+    // the account panel when signed in.
+    accountBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!state.authenticated) {
+            openModal();
+            return;
+        }
+        if (!accountDropdown) return;
+        var isOpen = accountDropdown.classList.toggle('open');
+        accountBtn.classList.toggle('active', isOpen);
+        accountBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
 
     function signOut() {
@@ -123,12 +136,7 @@
             .then(function() { setState(false, null); });
     }
 
-    if (accountIconBtn && accountDropdown) {
-        accountIconBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var isOpen = accountDropdown.classList.toggle('open');
-            accountIconBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
+    if (accountDropdown) {
         document.addEventListener('click', function(e) {
             if (!accountDropdown.classList.contains('open')) return;
             if (accountMenu && !accountMenu.contains(e.target)) closeAccountDropdown();

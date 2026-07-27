@@ -194,7 +194,9 @@ body::after {
 }
 
 .nav-brand {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: var(--accent-amber);
     text-decoration: none;
     font-family: var(--font-mono);
@@ -205,6 +207,23 @@ body::after {
     padding: 0 10px;
 }
 
+/* The source mark is dark-on-white artwork. Inverting it turns the white
+   plate black and the blue strokes amber-gold, and screen then drops that
+   black plate out against the rail — so the logo sits on the terminal
+   background with no card behind it and no separate dark-mode asset. */
+.nav-brand-logo {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    filter: invert(1) saturate(1.6) brightness(1.1);
+    mix-blend-mode: screen;
+}
+
+.nav-brand-text {
+    min-width: 0;
+}
+
 .nav-links {
     display: flex;
     flex-direction: column;
@@ -212,19 +231,26 @@ body::after {
     gap: 2px;
 }
 
+/* Shared by the <a> page links and the <button> panel triggers (Pro,
+   Profile) — the button reset lives here so both render identically. */
 .nav-link-item {
     display: flex;
     align-items: center;
     gap: 6px;
+    width: 100%;
     padding: 8px 10px;
     color: var(--text-muted);
     text-decoration: none;
+    text-align: left;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    background: none;
+    border: none;
     border-left: 2px solid transparent;
+    cursor: pointer;
     transition: color var(--transition-fast), background var(--transition-fast);
 }
 
@@ -285,59 +311,19 @@ body::after {
     color: var(--negative);
 }
 
-.nav-auth-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent-amber);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    padding: 5px 12px;
-    white-space: nowrap;
-    transition: border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.nav-auth-btn:hover {
-    border-color: var(--accent-amber);
-}
-
-/* Profile icon replacing the signed-in email button, plus its dropdown. */
-.account-menu {
+/* Profile nav item wrapper — exists only to anchor the dropdown; the
+   button inside it is a plain .nav-link-item like every other entry. */
+.nav-profile {
     position: relative;
-    display: none;
-}
-
-.account-menu.open {
-    display: block;
-}
-
-.account-icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent-amber);
-    cursor: pointer;
-    padding: 0;
-    transition: border-color var(--transition-fast);
-}
-
-.account-icon-btn:hover {
-    border-color: var(--accent-amber);
 }
 
 .account-dropdown {
     display: none;
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 4px);
     right: 0;
     min-width: 200px;
+    max-width: calc(100vw - 24px);
     background: var(--bg-panel);
     border: 1px solid var(--border);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -399,25 +385,12 @@ body::after {
     color: var(--negative);
 }
 
-/* Paid-tier CTA. Filled rather than outlined so it reads as the primary
-   action next to the outlined SIGN IN button. */
-.nav-waitlist-btn {
-    background: var(--accent-amber);
-    border: 1px solid var(--accent-amber);
-    color: var(--bg-base, #0f1117);
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
+/* Paid-tier entry. Now a nav item rather than a filled CTA, so it keeps
+   the menu's geometry and earns its prominence from colour and weight
+   alone — amber at rest, where the page links are muted. */
+.nav-link-item--pro {
+    color: var(--accent-amber);
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    padding: 5px 12px;
-    white-space: nowrap;
-    transition: opacity var(--transition-fast);
-}
-
-.nav-waitlist-btn:hover {
-    opacity: 0.85;
 }
 
 .nav-hamburger {

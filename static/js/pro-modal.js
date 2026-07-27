@@ -88,6 +88,14 @@
             });
     }
 
+    // Pro is a nav item now, so it takes the same .active treatment as a
+    // current page for as long as its panel is open.
+    var navProItem = document.getElementById('waitlistBtn');
+
+    function setNavProActive(isActive) {
+        if (navProItem) navProItem.classList.toggle('active', isActive);
+    }
+
     window.openWaitlistModal = function() {
         form.style.display = '';
         successEl.style.display = 'none';
@@ -97,11 +105,13 @@
         setSubmitting(false);
         loadPlans();
         modal.style.display = 'flex';
+        setNavProActive(true);
         var emailInput = document.getElementById('wlEmail');
         if (emailInput) emailInput.focus();
     };
     window.closeWaitlistModal = function() {
         modal.style.display = 'none';
+        setNavProActive(false);
     };
 
     if (closeBtn) {
@@ -121,9 +131,11 @@
     if (statusModal) {
         window.openProStatusModal = function() {
             statusModal.style.display = 'flex';
+            setNavProActive(true);
         };
         window.closeProStatusModal = function() {
             statusModal.style.display = 'none';
+            setNavProActive(false);
         };
         if (statusCloseBtn) {
             statusCloseBtn.addEventListener('click', window.closeProStatusModal);
